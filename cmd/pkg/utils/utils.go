@@ -52,12 +52,8 @@ func (u *Utils) WriteJSON(w http.ResponseWriter, r *http.Request, envelope strin
 
 	w.WriteHeader(statusCode)
 
-	err := json.NewEncoder(w).Encode(payload)
-	if err != nil {
-		return err
-	}
+	return json.NewEncoder(w).Encode(payload)
 
-	return nil
 }
 
 //  ErrorJSON is provided a response writer to write to, a pointer to a request, an envelope string, and some data
