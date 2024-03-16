@@ -32,7 +32,11 @@ func PingRouter() http.Handler {
 		statusMsg.Code = 200
 		statusMsg.Msg = "Successful Ping"
 
-		err := util.WriteJSON(w, r, "payload", statusMsg)
+		headers := make(http.Header)
+
+		headers.Add("Content-Type", "application/json;charset=utf-8")
+
+		err := util.WriteJSON(w, r, "payload", statusMsg, 200, headers)
 		if err != nil {
 			app.ErrorChan <- err
 		}

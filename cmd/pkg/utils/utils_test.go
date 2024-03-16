@@ -76,7 +76,14 @@ func Test_WriteJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testType, func(t *testing.T) {
-			err = utils.WriteJSON(mrw, req, "testEnvelope", tt.data)
+
+			mockHeaders := make(http.Header)
+
+			for _, header := range headers {
+				mockHeaders.Add(header.key, header.value)
+			}
+
+			err = utils.WriteJSON(mrw, req, "testEnvelope", tt.data, 200, mockHeaders)
 			if err != nil {
 				if tt.testType == "pass" {
 					t.Fatalf("WriteJSON failed: %v", err)
@@ -90,6 +97,12 @@ func Test_WriteJSON(t *testing.T) {
 				if tt.testType == "pass" {
 					t.Fatalf("Expected an error, but got none.")
 				}
+			}
+
+			h := mrw.Header().Get("Content-Type")
+
+			if len(h) == 0 {
+				t.Errorf("expected a value for header but got nil")
 			}
 		})
 	}
