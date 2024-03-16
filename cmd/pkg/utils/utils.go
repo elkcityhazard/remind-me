@@ -30,14 +30,27 @@ func NewUtils(a *config.AppConfig) *Utils {
 
 // WriteJSON takes in a responseWriter, request, enveolor, and data and write json to the response writer.
 // it can return a potential error
-func (u *Utils) WriteJSON(w http.ResponseWriter, r *http.Request, envelope string, data interface{}) error {
+// to pass in headers use headers := make(http.Header)
+func (u *Utils) WriteJSON(w http.ResponseWriter, r *http.Request, envelope string, data interface{}, statusCode int, headers ...http.Header) error {
 	payload := make(map[string]interface{})
 
 	payload[envelope] = data
 
 	w.Header().Set("Content-Type", "application/json;encoding=utf-8;")
 
-	w.WriteHeader(http.StatusOK)
+	if len(headers) > 0 {
+
+		for _, header := range headers {
+			for key, value := range header {
+				for _, v := range value {
+					w.Header().Add(key, v)
+				}
+			}
+		}
+
+	}
+
+	w.WriteHeader(statusCode)
 
 	err := json.NewEncoder(w).Encode(payload)
 	if err != nil {
