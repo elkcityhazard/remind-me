@@ -3,9 +3,9 @@ package main
 import (
 	"net/http"
 
-	"github.com/elkcityhazard/remind-me/cmd/internal/config"
-	"github.com/elkcityhazard/remind-me/cmd/internal/handlers"
-	"github.com/elkcityhazard/remind-me/cmd/pkg/utils"
+	"github.com/elkcityhazard/remind-me/internal/config"
+	"github.com/elkcityhazard/remind-me/internal/handlers"
+	"github.com/elkcityhazard/remind-me/pkg/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -27,7 +27,7 @@ func routes(app *config.AppConfig) *chi.Mux {
 
 func UserRoutes() http.Handler {
 	r := chi.NewRouter()
-
+	r.Post("/add", handlers.InsertUser)
 	r.Get("/{id}", handlers.GetUserByID)
 
 	return r

@@ -6,15 +6,13 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/elkcityhazard/remind-me/cmd/internal/config"
-	"github.com/elkcityhazard/remind-me/cmd/internal/dbrepo/sqldbrepo"
-	"github.com/elkcityhazard/remind-me/cmd/internal/handlers"
-	"github.com/elkcityhazard/remind-me/cmd/pkg/utils"
+	"github.com/elkcityhazard/remind-me/internal/config"
+	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
+	"github.com/elkcityhazard/remind-me/internal/handlers"
 )
 
 var (
 	app config.AppConfig
-	utl *utils.Utils
 )
 
 func main() {
@@ -22,6 +20,8 @@ func main() {
 
 	parseFlags()
 	app.Session = getSession()
+
+	handlers.NewHandlers(&app)
 
 	go listenForErrors(app.ErrorChan, app.ErrorDoneChan)
 	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
@@ -49,9 +49,8 @@ func main() {
 
 	app.InfoLog.Printf("Starting server on %s\n", srv.Addr)
 
-	err = srv.ListenAndServeTLS("localhost.crt", "localhost.key")
+	log.Fatalln(srv.ListenAndServeTLS("server.crt", "server.key"))
 
-	log.Fatal(err)
 }
 
 func listenForErrors(eChan <-chan error, eDoneChan <-chan bool) {
