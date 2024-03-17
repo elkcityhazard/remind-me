@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type Password struct {
 	ID         int64     `json:"id"`
@@ -34,4 +37,10 @@ type User struct {
 	Scope       int         `json:"-"`
 	IsActive    bool        `json:"is_active"`
 	Version     int         `json:"version"`
+}
+
+//	PasswordsMatch takes in two provided passwords, and returns whether or not they match
+
+func (u *User) PasswordsMatch(password1, password2 string) bool {
+	return strings.EqualFold(password1, password2)
 }

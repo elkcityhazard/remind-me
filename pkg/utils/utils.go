@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"reflect"
 
 	"github.com/elkcityhazard/remind-me/internal/config"
 	"golang.org/x/crypto/argon2"
@@ -137,5 +138,42 @@ func (u *Utils) VerifyArgon2Password(password string, storedHash string, storedS
 	hash := argon2.IDKey([]byte(password), saltBytes, uint32(u.argonParams.iterations), uint32(u.argonParams.memory), uint8(u.argonParams.parallelism), uint32(u.argonParams.keylength))
 
 	return subtle.ConstantTimeCompare(hash, hashBytes) == 1
+
+}
+
+// IsRequred traverse an interface, and looks to see if a key is present and returns a bool
+
+func (u *Utils) IsRequired(s interface{}, key string) bool {
+
+	val := reflect.ValueOf(s)
+
+	// handle pointer
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	// loop through the fields and determine if the field exists
+
+	for i := 0; i < val.NumField(); i++ {
+		// get the field based on index
+		field := val.Field(i)
+		//	get the field type
+		fieldType := val.Type().Field(i)
+
+		// check if the field name is equal to the key and return true if it is non zero
+		if fieldType.Name == key {
+			return !field.IsZero()
+		}
+
+		// use recursion and check if the field kind is a struct, and perform the same operation
+
+		if field.Kind() == reflect.Struct {
+			if u.IsRequired(field.Interface(), key) {
+				return true
+			}
+		}
+	}
+
+	return false
 
 }
