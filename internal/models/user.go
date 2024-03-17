@@ -3,14 +3,15 @@ package models
 import "time"
 
 type Password struct {
-	ID        int64     `json:"id"`
-	Plaintext string    `json:"-"`
-	Hash      []byte    `json:"-"`
-	Salt      []byte    `json:"-"`
-	UserID    int64     `json:"-"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Version   int       `json:"version"`
+	ID         int64     `json:"id"`
+	Plaintext1 string    `json:"-"`
+	Plaintext2 string    `json:"-"`
+	Hash       []byte    `json:"-"`
+	Salt       []byte    `json:"-"`
+	UserID     int64     `json:"-"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	Version    int       `json:"version"`
 }
 
 type PhoneNumber struct {
