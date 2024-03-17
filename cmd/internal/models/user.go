@@ -3,13 +3,23 @@ package models
 import "time"
 
 type Password struct {
-	Plaintext string `json:"-"`
-	Hash      []byte `json:"-"`
+	ID        int64     `json:"id"`
+	Plaintext string    `json:"-"`
+	Hash      []byte    `json:"-"`
+	UserID    int64     `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int       `json:"version"`
 }
 
 type PhoneNumber struct {
-	Plantext string `json:"plaintext"`
-	Hash     []byte `json:"-"`
+	ID        int64     `json:"id"`
+	Plantext  string    `json:"plaintext"`
+	Hash      []byte    `json:"-"`
+	UserID    int64     `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int       `json:"version"`
 }
 
 type User struct {

@@ -19,3 +19,13 @@
 
 # Go workspace file
 go.work
+
+docker-*.yml
+Makefile
+**/bin
+**/data
+**/migrations
+localhost.*
+*.crt
+*.csr
+*.key

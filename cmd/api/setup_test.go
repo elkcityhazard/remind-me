@@ -5,12 +5,11 @@ import (
 	"testing"
 
 	"github.com/elkcityhazard/remind-me/cmd/internal/config"
-	"github.com/elkcityhazard/remind-me/cmd/pkg/utils"
 )
 
 func TestMain(m *testing.M) {
 	app = config.NewAppConfig()
-	util = utils.NewUtils(app)
-
+	//  Make this work, all you have to do is
+	// M.Run will handle running tests after app setup
 	os.Exit(m.Run())
 }

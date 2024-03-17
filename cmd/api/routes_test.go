@@ -18,7 +18,7 @@ func TestRoutes(t *testing.T) {
 		t.Errorf("Expecting a mux router; got nil")
 	}
 
-	routes := routes()
+	routes := routes(&app)
 
 	chi.Walk(routes, func(method string, route string, handler http.Handler, middleware ...func(http.Handler) http.Handler) error {
 		req := httptest.NewRequest(method, route, nil)

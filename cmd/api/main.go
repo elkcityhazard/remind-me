@@ -2,28 +2,45 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"log"
 	"net/http"
 
 	"github.com/elkcityhazard/remind-me/cmd/internal/config"
+	"github.com/elkcityhazard/remind-me/cmd/internal/dbrepo/sqldbrepo"
+	"github.com/elkcityhazard/remind-me/cmd/internal/handlers"
 	"github.com/elkcityhazard/remind-me/cmd/pkg/utils"
 )
 
 var (
-	app  *config.AppConfig
-	util *utils.Utils
+	app config.AppConfig
+	utl *utils.Utils
 )
 
 func main() {
 	app = config.NewAppConfig()
 
-	util = utils.NewUtils(app)
+	parseFlags()
+	app.Session = getSession()
 
 	go listenForErrors(app.ErrorChan, app.ErrorDoneChan)
+	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
+	if err != nil {
+		app.ErrorChan <- err
+	}
+
+	app.DB = dbConn
+
+	err = app.DB.Ping()
+	if err != nil {
+		app.ErrorChan <- err
+	}
+
+	handlers.NewHandlers(&app) // we are passing this to the handlers package.  we might want to upgrade it to an interface later
 
 	srv := &http.Server{
 		Addr:    ":8080",
-		Handler: routes(),
+		Handler: routes(&app),
 		TLSConfig: &tls.Config{
 			MinVersion:               tls.VersionTLS13,
 			PreferServerCipherSuites: true,
@@ -32,7 +49,7 @@ func main() {
 
 	app.InfoLog.Printf("Starting server on %s\n", srv.Addr)
 
-	err := srv.ListenAndServeTLS("localhost.crt", "localhost.key")
+	err = srv.ListenAndServeTLS("localhost.crt", "localhost.key")
 
 	log.Fatal(err)
 }
@@ -41,9 +58,15 @@ func listenForErrors(eChan <-chan error, eDoneChan <-chan bool) {
 	for {
 		select {
 		case err := <-eChan:
-			log.Println(err)
+			app.ErrorLog.Print(err.Error())
 		case <-eDoneChan:
 			return
 		}
 	}
+}
+
+func parseFlags() {
+	flag.StringVar(&app.DSN, "DSN", "", "the database source name to connect to the database")
+
+	flag.Parse()
 }

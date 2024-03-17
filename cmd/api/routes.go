@@ -3,22 +3,39 @@ package main
 import (
 	"net/http"
 
+	"github.com/elkcityhazard/remind-me/cmd/internal/config"
+	"github.com/elkcityhazard/remind-me/cmd/internal/handlers"
+	"github.com/elkcityhazard/remind-me/cmd/pkg/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func routes() *chi.Mux {
+func routes(app *config.AppConfig) *chi.Mux {
 	mux := chi.NewRouter()
 
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
 
-	mux.Mount("/api/v1", PingRouter())
+	mux.Use(app.Session.LoadAndSave)
+
+	mux.Mount("/api/v1", PingRouter(app))
+
+	mux.Mount("/api/v1/users", UserRoutes())
 
 	return mux
 }
 
-func PingRouter() http.Handler {
+func UserRoutes() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/{id}", handlers.GetUserByID)
+
+	return r
+}
+
+func PingRouter(app *config.AppConfig) http.Handler {
+	util := utils.NewUtils(app)
+
 	r := chi.NewRouter()
 
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {

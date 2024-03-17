@@ -19,6 +19,9 @@ type Utils struct {
 	maxFileSize int
 }
 
+// NewUtils is a utility helper to take care of certain tasks
+// It needs the app config passed into it so it can have access
+// to app wide items
 func NewUtils(a *config.AppConfig) *Utils {
 	app = a
 
@@ -39,7 +42,6 @@ func (u *Utils) WriteJSON(w http.ResponseWriter, r *http.Request, envelope strin
 	w.Header().Set("Content-Type", "application/json;encoding=utf-8;")
 
 	if len(headers) > 0 {
-
 		for _, header := range headers {
 			for key, value := range header {
 				for _, v := range value {
@@ -47,13 +49,11 @@ func (u *Utils) WriteJSON(w http.ResponseWriter, r *http.Request, envelope strin
 				}
 			}
 		}
-
 	}
 
 	w.WriteHeader(statusCode)
 
 	return json.NewEncoder(w).Encode(payload)
-
 }
 
 //  ErrorJSON is provided a response writer to write to, a pointer to a request, an envelope string, and some data
