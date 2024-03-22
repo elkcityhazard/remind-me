@@ -3,7 +3,7 @@ package sqldbrepo
 import (
 	"testing"
 
-	"github.com/elkcityhazard/remind-me/cmd/internal/config"
+	"github.com/elkcityhazard/remind-me/internal/config"
 )
 
 func Test_NewSQLDBRepo(t *testing.T) {

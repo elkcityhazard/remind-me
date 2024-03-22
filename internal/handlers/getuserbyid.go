@@ -64,8 +64,8 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var password1 = user.Password.Plaintext1
-	var password2 = user.Password.Plaintext2
+	// var password1 = user.Password.Plaintext1
+	// var password2 = user.Password.Plaintext2
 
 	if err := utils.NewUtils(app).WriteJSON(w, r, "user", user, http.StatusOK); err != nil {
 		http.Error(w, "error writing json to response writer", http.StatusInternalServerError)
@@ -74,4 +74,6 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
+
+	w.Write([]byte("hello, world"))
 }

@@ -192,3 +192,73 @@ func Test_ErrorJSON(t *testing.T) {
 		})
 	}
 }
+
+func Test_IsRequired(t *testing.T) {
+
+	tests := []struct {
+		Name     string
+		Tag      string
+		Data     any
+		Expected bool
+	}{
+		{
+			Name: "has tag",
+			Tag:  "name",
+			Data: struct {
+				name string
+			}{
+				name: "bill",
+			},
+			Expected: true,
+		}, {
+			Name: "does not have tag",
+			Tag:  "acct",
+			Data: struct {
+				name string
+			}{
+				name: "bill",
+			},
+			Expected: false,
+		}, {
+			Name: "tag is embedded struct",
+			Tag:  "Age",
+			Data: struct {
+				Name          string
+				SomethingElse struct {
+					Age int
+				}
+			}{
+				Name:          "bill",
+				SomethingElse: struct{ Age int }{Age: 9},
+			},
+			Expected: true,
+		},
+		{
+			Name: "tag is pointer",
+			Tag:  "Age",
+			Data: struct {
+				Age *uint
+			}{
+				Age: func() *uint {
+					age := uint(42)
+					return &age
+				}(),
+			},
+			Expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+
+			u := NewUtils(app)
+
+			hasField := u.IsRequired(tt.Data, tt.Tag)
+
+			if tt.Expected && !hasField {
+				t.Errorf("Expected %s, but got %v", tt.Tag, hasField)
+			}
+
+		})
+	}
+}

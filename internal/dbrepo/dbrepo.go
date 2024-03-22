@@ -1,6 +1,6 @@
 package dbrepo
 
-import "github.com/elkcityhazard/remind-me/cmd/internal/models"
+import "github.com/elkcityhazard/remind-me/internal/models"
 
 type DBServicer interface {
 	InsertUser(*models.User) (int64, error)
