@@ -76,7 +76,6 @@ func Test_WriteJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testType, func(t *testing.T) {
-
 			mockHeaders := make(http.Header)
 
 			for _, header := range headers {
@@ -188,13 +187,11 @@ func Test_ErrorJSON(t *testing.T) {
 			if len(mrwHeaders) == 0 {
 				t.Errorf("Expecting %s, but received no Content-Type header", "application/json;charset=utf-8")
 			}
-
 		})
 	}
 }
 
 func Test_IsRequired(t *testing.T) {
-
 	tests := []struct {
 		Name     string
 		Tag      string
@@ -210,7 +207,8 @@ func Test_IsRequired(t *testing.T) {
 				name: "bill",
 			},
 			Expected: true,
-		}, {
+		},
+		{
 			Name: "does not have tag",
 			Tag:  "acct",
 			Data: struct {
@@ -219,7 +217,8 @@ func Test_IsRequired(t *testing.T) {
 				name: "bill",
 			},
 			Expected: false,
-		}, {
+		},
+		{
 			Name: "tag is embedded struct",
 			Tag:  "Age",
 			Data: struct {
@@ -250,7 +249,6 @@ func Test_IsRequired(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-
 			u := NewUtils(app)
 
 			hasField := u.IsRequired(tt.Data, tt.Tag)
@@ -258,7 +256,36 @@ func Test_IsRequired(t *testing.T) {
 			if tt.Expected && !hasField {
 				t.Errorf("Expected %s, but got %v", tt.Tag, hasField)
 			}
-
 		})
+	}
+}
+
+func Test_GenerateRandomBytes(t *testing.T) {
+	u := NewUtils(app)
+
+	hash, err := u.GenerateRandomBytes(uint32(u.ArgonParams.SaltLength))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(hash)
+
+	if len(hash) == 0 {
+		t.Error("expected a hash with length, got no hash")
+	}
+}
+
+func Test_NoLengthGenerateRandomBytes(t *testing.T) {
+	u := NewUtils(app)
+
+	hash, err := u.GenerateRandomBytes(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(hash)
+
+	if len(hash) == 0 {
+		t.Error("expected a hash with length, got no hash")
 	}
 }
