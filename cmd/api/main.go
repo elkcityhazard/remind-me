@@ -57,7 +57,6 @@ func listenForErrors(eChan <-chan error, eDoneChan <-chan bool) {
 	for {
 		select {
 		case err := <-eChan:
-			app.ErrorLog.Print(err)
 			app.ErrorLog.Print(err.Error())
 		case <-eDoneChan:
 			return

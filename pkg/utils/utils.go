@@ -5,9 +5,12 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/elkcityhazard/remind-me/internal/config"
 	"golang.org/x/crypto/argon2"
@@ -16,6 +19,7 @@ import (
 var app *config.AppConfig
 
 type Utilser interface {
+	ValidatePhoneNumber(string) bool
 	WriteJSON(w http.ResponseWriter, r *http.Request, envelope string, data interface{}) error
 	ErrorJSON(w http.ResponseWriter, r *http.Request, enveloper string, data interface{}, statusCode int, headers ...http.Header) error
 	CreateArgonHash(string, []byte) string
@@ -24,10 +28,10 @@ type Utilser interface {
 }
 
 type ArgonParams struct {
-	Memory      int
-	Iterations  int
-	Parallelism int
-	SaltLength  int
+	Memory      uint32
+	Iterations  uint32
+	Parallelism uint8
+	SaltLength  uint32
 	KeyLength   int
 	SaltKey     []byte
 }
@@ -94,18 +98,69 @@ func (u *Utils) CreateArgonHash(plainTextPW string) string {
 
 	encodedHash := fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, u.ArgonParams.Memory, u.ArgonParams.Iterations, u.ArgonParams.Parallelism, b64Salt, b64Hash)
 
-	fmt.Println("Encoded Hash: ", encodedHash)
-
 	return encodedHash
 }
 
 //   VerifyArgonHash accepts a plaintext password and compares it to a stored hash
 //   and returns a bool (true) if it matches or (false) if it does not match
 
-func (u *Utils) VerifyArgonHash(plaintextPW string, previousHash []byte) bool {
-	hash := argon2.IDKey([]byte(plaintextPW), u.ArgonParams.SaltKey, uint32(u.ArgonParams.Iterations), uint32(u.ArgonParams.Memory), uint8(u.ArgonParams.Parallelism), uint32(u.ArgonParams.KeyLength))
+func (u *Utils) VerifyArgonHash(plaintextPW string, previousHash string) bool {
 
-	return subtle.ConstantTimeCompare(hash, previousHash) == 1
+	p, salt, hash, err := u.DecodeHash(previousHash)
+
+	if err != nil {
+		return false
+	}
+
+	existingHash := argon2.IDKey([]byte(plaintextPW), salt, p.Iterations, p.Memory, p.Parallelism, uint32(p.KeyLength))
+
+	return subtle.ConstantTimeCompare(hash, existingHash) == 1
+}
+
+func (u *Utils) DecodeHash(encodedHash string) (p *ArgonParams, salt, hash []byte, err error) {
+
+	// split the encoded has
+
+	vals := strings.Split(encodedHash, "$")
+
+	if len(vals) != 6 {
+		return nil, nil, nil, errors.New("invalid hash")
+	}
+
+	// we are going to go through the vals and scan the values into their respective vars
+
+	// get version
+	var version int
+	_, err = fmt.Sscanf(vals[2], "v=%d", &version)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if version != argon2.Version {
+		return nil, nil, nil, errors.New("incompatible version")
+	}
+
+	// get params
+
+	p = &ArgonParams{}
+	_, err = fmt.Sscanf(vals[3], "m=%d,t=%d,p=%d", &p.Memory, &p.Iterations, &p.Parallelism)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	salt, err = base64.RawStdEncoding.Strict().DecodeString(vals[4])
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	p.SaltLength = uint32(len(salt))
+
+	hash, err = base64.RawStdEncoding.Strict().DecodeString(vals[5])
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	p.KeyLength = len(hash)
+
+	return p, salt, hash, nil
+
 }
 
 // WriteJSON takes in a responseWriter, request, enveolor, and data and write json to the response writer.
@@ -189,4 +244,17 @@ func (u *Utils) IsRequired(s interface{}, key string) bool {
 	}
 
 	return false
+}
+
+// ValidatePhoneNumber takes in a phone number as a text string, and runs a regex match on it and returns the result as a bool
+func (u *Utils) ValidatePhoneNumber(s string) bool {
+	re, err := regexp.Compile(`^(?:\+?1\s?)?(?:\(\d{3}\)\s?|\d{3}[-.\s]?)?\d{3}[-.\s]?\d{4}(?:\s?x\s?\d+)?$`)
+
+	if err != nil {
+		return false
+	}
+
+	matches := re.MatchString(s)
+
+	return matches
 }

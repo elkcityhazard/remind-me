@@ -4,13 +4,12 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/alexedwards/scs/v2"
 )
 
 type Apper interface{}
-
-var app *AppConfig
 
 type AppConfig struct {
 	IsProduction  bool
@@ -22,6 +21,7 @@ type AppConfig struct {
 	ErrorLog      *log.Logger
 	ErrorChan     chan error
 	ErrorDoneChan chan bool
+	WG            sync.WaitGroup
 }
 
 // NewAppConfig returns an app config preloaded with a few necessary components
@@ -31,5 +31,6 @@ func NewAppConfig() AppConfig {
 		ErrorLog:      log.New(os.Stdout, "ERROR: -> ", log.Ldate|log.Ltime|log.Lshortfile),
 		ErrorChan:     make(chan error),
 		ErrorDoneChan: make(chan bool),
+		WG:            sync.WaitGroup{},
 	}
 }

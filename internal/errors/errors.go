@@ -1,7 +1,13 @@
-package errors
+package cerrors
 
 type Errors struct {
 	ErrorLog map[string][]string
+}
+
+func NewErrors() *Errors {
+	return &Errors{
+		ErrorLog: map[string][]string{},
+	}
 }
 
 //		Add looks ip a key on the Error Log, and appends the value

@@ -277,15 +277,70 @@ func Test_GenerateRandomBytes(t *testing.T) {
 
 func Test_NoLengthGenerateRandomBytes(t *testing.T) {
 	u := NewUtils(app)
-
 	hash, err := u.GenerateRandomBytes(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(hash)
-
-	if len(hash) == 0 {
+	if len(hash) != 0 {
 		t.Error("expected a hash with length, got no hash")
+	}
+}
+
+func Test_ValidatePhoneNumber(t *testing.T) {
+	// Define test cases
+	tests := []struct {
+		name     string
+		phoneNum string
+		expected bool
+	}{
+		{
+			name:     "Valid US Phone Number",
+			phoneNum: "123-456-7890",
+			expected: true,
+		},
+		{
+			name:     "Valid US Phone Number with Extension",
+			phoneNum: "123-456-7890 x123",
+			expected: true,
+		},
+		{
+			name:     "Valid International Phone Number",
+			phoneNum: "+1 123-456-7890",
+			expected: true,
+		},
+		{
+			name:     "Invalid Phone Number - Too Short",
+			phoneNum: "123-456-789",
+			expected: false,
+		},
+		{
+			name:     "Invalid Phone Number - Too Long",
+			phoneNum: "123-456-78901",
+			expected: false,
+		},
+		{
+			name:     "Invalid Phone Number - Missing Digits",
+			phoneNum: "123-456-789A",
+			expected: false,
+		},
+		{
+			name:     "Invalid Phone Number - Special Characters",
+			phoneNum: "123-456-7890!",
+			expected: false,
+		},
+	}
+
+	// Initialize Utils
+	u := NewUtils(app)
+
+	// Run each test case
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := u.ValidatePhoneNumber(tt.phoneNum)
+			if result != tt.expected {
+				t.Errorf("ValidatePhoneNumber(%s) = %v; expected %v", tt.phoneNum, result, tt.expected)
+			}
+		})
 	}
 }

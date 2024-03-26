@@ -7,8 +7,8 @@ import (
 
 type Password struct {
 	ID         int64     `json:"id"`
-	Plaintext1 string    `json:"-"`
-	Plaintext2 string    `json:"-"`
+	Plaintext1 string    `json:"plaintext_1"`
+	Plaintext2 string    `json:"plaintext_2"`
 	Hash       []byte    `json:"-"`
 	Salt       []byte    `json:"-"`
 	UserID     int64     `json:"-"`
