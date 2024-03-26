@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS Reminder (
+    ID BIGINT PRIMARY KEY AUTO_INCREMENT,
+    Title VARCHAR(255) NOT NULL,
+    HTML TEXT,
+    Plaintext TEXT,
+    UserID BIGINT,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    Version INT,
+    IsProcessed BOOLEAN DEFAULT FALSE
+);
+
+
+CREATE INDEX idx_reminder_title ON Reminder(Title);
+
+CREATE INDEX idx_reminder_userid ON Reminder(UserID);

@@ -25,6 +25,7 @@ type Utilser interface {
 	CreateArgonHash(string, []byte) string
 	GenerateRandomBytes(uint32) ([]byte, error)
 	VerifyArgonHash(string, []byte) bool
+	GenerateActivationToken() (string, error)
 }
 
 type ArgonParams struct {
@@ -257,4 +258,24 @@ func (u *Utils) ValidatePhoneNumber(s string) bool {
 	matches := re.MatchString(s)
 
 	return matches
+}
+
+// GenerateActivationToken returns a string or an error
+// the string is a simple activation token which is used in activation emails
+// the error is if there is any issues generating rand
+
+func (u *Utils) GenerateActivationToken() (string, error) {
+
+	b := make([]byte, 16)
+
+	_, err := rand.Read(b)
+
+	if err != nil {
+		return "", err
+	}
+
+	token := base64.RawStdEncoding.WithPadding(base64.NoPadding).EncodeToString(b)
+
+	return token, nil
+
 }

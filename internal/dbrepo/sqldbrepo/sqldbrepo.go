@@ -8,8 +8,10 @@ import (
 
 	"github.com/elkcityhazard/remind-me/internal/config"
 	"github.com/elkcityhazard/remind-me/internal/models"
+	"github.com/elkcityhazard/remind-me/pkg/utils"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -95,6 +97,30 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		_, err = tx.ExecContext(ctx, "INSERT INTO PhoneNumber (Plaintext, UserID, CreatedAt, UpdatedAt, Version) Values (?, ?, NOW(), NOW(), 1)", u.PhoneNumber.Plaintext, userID)
+
+		if err != nil {
+			tx.Rollback()
+			errorChan <- err
+			return
+		}
+
+		activationToken, err := utils.NewUtils(sqdb.Config).GenerateActivationToken()
+
+		if err != nil {
+			tx.Rollback()
+			errorChan <- err
+			return
+		}
+
+		encryptedToken, err := bcrypt.GenerateFromPassword([]byte(activationToken), 10)
+
+		if err != nil {
+			tx.Rollback()
+			errorChan <- err
+			return
+		}
+
+		_, err = tx.ExecContext(ctx, "INSERT INTO ActivationToken (UserID, Token, CreatedAt, UpdatedAt, IsProcessed) Values(?,?, NOW(), NOW(), false)", userID, encryptedToken)
 
 		if err != nil {
 			tx.Rollback()

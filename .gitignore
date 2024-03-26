@@ -24,7 +24,6 @@ docker-*.yml
 Makefile
 **/bin
 **/data
-**/migrations
 localhost.*
 *.crt
 *.csr
