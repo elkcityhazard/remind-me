@@ -24,7 +24,12 @@ type SQLDBRepo struct {
 	Config *config.AppConfig
 }
 
+var (
+	app *config.AppConfig
+)
+
 func NewSQLDBRepo(ac *config.AppConfig) *SQLDBRepo {
+	app = ac
 	return &SQLDBRepo{
 		Config: ac,
 	}
@@ -134,6 +139,16 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 			errorChan <- err
 			return
 		}
+
+		ed := models.EmailData{
+			Recipient:    u.Email,
+			TemplateFile: "user_welcome.tmpl",
+			Data:         activationToken,
+		}
+
+		sqdb.Config.InfoLog.Println("trying to send email....")
+
+		sqdb.Config.Mailer.MailerDataChan <- &ed
 
 	}()
 

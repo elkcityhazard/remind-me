@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/elkcityhazard/remind-me/internal/mailer"
 )
 
 type Apper interface{}
@@ -22,6 +23,7 @@ type AppConfig struct {
 	ErrorChan     chan error
 	ErrorDoneChan chan bool
 	WG            sync.WaitGroup
+	Mailer        mailer.Mailer
 }
 
 // NewAppConfig returns an app config preloaded with a few necessary components
@@ -32,5 +34,6 @@ func NewAppConfig() AppConfig {
 		ErrorChan:     make(chan error),
 		ErrorDoneChan: make(chan bool),
 		WG:            sync.WaitGroup{},
+		Mailer:        mailer.New("localhost", 1025, "web@remind-me.com", "", ""),
 	}
 }

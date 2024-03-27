@@ -21,6 +21,8 @@ func main() {
 	parseFlags()
 	app.Session = getSession()
 
+	go app.Mailer.ListenForMail()
+
 	handlers.NewHandlers(&app)
 
 	go listenForErrors(app.ErrorChan, app.ErrorDoneChan)
