@@ -28,12 +28,12 @@ type AppConfig struct {
 
 // NewAppConfig returns an app config preloaded with a few necessary components
 func NewAppConfig() AppConfig {
-	return AppConfig{
+
+	var app = AppConfig{
 		InfoLog:       log.New(os.Stdout, "INFO: -> ", log.Ldate|log.Ltime),
 		ErrorLog:      log.New(os.Stdout, "ERROR: -> ", log.Ldate|log.Ltime|log.Lshortfile),
 		ErrorChan:     make(chan error),
 		ErrorDoneChan: make(chan bool),
 		WG:            sync.WaitGroup{},
-		Mailer:        mailer.New("localhost", 1025, "web@remind-me.com", "", ""),
 	}
 }

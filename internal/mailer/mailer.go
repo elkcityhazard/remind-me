@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"log"
 	"text/template"
 	"time"
 
+	"github.com/elkcityhazard/remind-me/internal/config"
 	"github.com/elkcityhazard/remind-me/internal/models"
 	"github.com/go-mail/mail/v2"
 )
@@ -21,10 +21,11 @@ type Mailer struct {
 	MailerErrorChan chan error
 	MailerDataChan  chan *models.EmailData
 	MailerDoneChan  chan bool
+	AppConfig       *config.AppConfig
 }
 
 // New returns a new mailer with all necessary config passed into it
-func New(host string, port int, username, password, sender string) Mailer {
+func New(host string, port int, username, password, sender string, app *config.AppConfig) Mailer {
 
 	dialer := mail.NewDialer(host, port, username, password)
 	dialer.Timeout = 5 * time.Second
@@ -35,33 +36,38 @@ func New(host string, port int, username, password, sender string) Mailer {
 		MailerErrorChan: make(chan error),
 		MailerDataChan:  make(chan *models.EmailData),
 		MailerDoneChan:  make(chan bool),
+		AppConfig:       app,
 	}
 }
 
-func (m Mailer) Send(recipient, templateFile string, data any) error {
+func (m Mailer) Send(recipient, templateFile string, data any) {
 	tmpl, err := template.New("email").ParseFS(templateFS, "templates/"+templateFile)
 
 	if err != nil {
-		return err
+		m.MailerErrorChan <- err
+		return
 	}
 
 	subject := new(bytes.Buffer)
 	// 	we can execute just the parts in the template file
 	err = tmpl.ExecuteTemplate(subject, "subject", data)
 	if err != nil {
-		return err
+		m.MailerErrorChan <- err
+		return
 	}
 
 	plainBody := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(plainBody, "plainBody", data)
 	if err != nil {
-		return err
+		m.MailerErrorChan <- err
+		return
 	}
 
 	htmlBody := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(htmlBody, "htmlBody", data)
 	if err != nil {
-		return err
+		m.MailerErrorChan <- err
+		return
 	}
 
 	msg := mail.NewMessage()
@@ -73,10 +79,9 @@ func (m Mailer) Send(recipient, templateFile string, data any) error {
 
 	err = m.Dialer.DialAndSend(msg)
 	if err != nil {
-		return err
+		m.MailerErrorChan <- err
+		return
 	}
-
-	return nil
 
 }
 
@@ -85,10 +90,9 @@ func (m *Mailer) ListenForMail() {
 	for {
 		select {
 		case data := <-m.MailerDataChan:
-			log.Println("Received a message...")
 			go m.Send(data.Recipient, data.TemplateFile, data.Data)
 		case err := <-m.MailerErrorChan:
-			log.Println(err)
+			m.AppConfig.ErrorChan <- err
 		case <-m.MailerDoneChan:
 			fmt.Println("mailer done signal")
 			return

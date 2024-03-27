@@ -9,6 +9,7 @@ import (
 	"github.com/elkcityhazard/remind-me/internal/config"
 	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
 	"github.com/elkcityhazard/remind-me/internal/handlers"
+	"github.com/elkcityhazard/remind-me/internal/mailer"
 )
 
 var (
@@ -17,6 +18,10 @@ var (
 
 func main() {
 	app = config.NewAppConfig()
+
+	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com", &app)
+
+	app.Mailer = mailHandler
 
 	parseFlags()
 	app.Session = getSession()

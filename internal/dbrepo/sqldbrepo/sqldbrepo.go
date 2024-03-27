@@ -140,13 +140,15 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 			return
 		}
 
+		emailData := make(map[string]interface{})
+
+		emailData["ID"] = activationToken
+
 		ed := models.EmailData{
 			Recipient:    u.Email,
 			TemplateFile: "user_welcome.tmpl",
-			Data:         activationToken,
+			Data:         emailData,
 		}
-
-		sqdb.Config.InfoLog.Println("trying to send email....")
 
 		sqdb.Config.Mailer.MailerDataChan <- &ed
 
