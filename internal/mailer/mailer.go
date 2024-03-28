@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"log"
+	"sync"
 	"text/template"
 	"time"
 
-	"github.com/elkcityhazard/remind-me/internal/config"
 	"github.com/elkcityhazard/remind-me/internal/models"
 	"github.com/go-mail/mail/v2"
 )
@@ -21,11 +22,10 @@ type Mailer struct {
 	MailerErrorChan chan error
 	MailerDataChan  chan *models.EmailData
 	MailerDoneChan  chan bool
-	AppConfig       *config.AppConfig
 }
 
 // New returns a new mailer with all necessary config passed into it
-func New(host string, port int, username, password, sender string, app *config.AppConfig) Mailer {
+func New(host string, port int, username, password, sender string) Mailer {
 
 	dialer := mail.NewDialer(host, port, username, password)
 	dialer.Timeout = 5 * time.Second
@@ -36,7 +36,6 @@ func New(host string, port int, username, password, sender string, app *config.A
 		MailerErrorChan: make(chan error),
 		MailerDataChan:  make(chan *models.EmailData),
 		MailerDoneChan:  make(chan bool),
-		AppConfig:       app,
 	}
 }
 
@@ -85,14 +84,16 @@ func (m Mailer) Send(recipient, templateFile string, data any) {
 
 }
 
-func (m *Mailer) ListenForMail() {
+func (m *Mailer) ListenForMail(wg *sync.WaitGroup) {
+
+	defer wg.Done()
 
 	for {
 		select {
 		case data := <-m.MailerDataChan:
 			go m.Send(data.Recipient, data.TemplateFile, data.Data)
 		case err := <-m.MailerErrorChan:
-			m.AppConfig.ErrorChan <- err
+			log.Println(err)
 		case <-m.MailerDoneChan:
 			fmt.Println("mailer done signal")
 			return

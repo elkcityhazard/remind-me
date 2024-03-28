@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"os"
@@ -23,17 +24,20 @@ type AppConfig struct {
 	ErrorChan     chan error
 	ErrorDoneChan chan bool
 	WG            sync.WaitGroup
+	Context       context.Context
 	Mailer        mailer.Mailer
 }
 
 // NewAppConfig returns an app config preloaded with a few necessary components
 func NewAppConfig() AppConfig {
 
-	var app = AppConfig{
+	return AppConfig{
 		InfoLog:       log.New(os.Stdout, "INFO: -> ", log.Ldate|log.Ltime),
 		ErrorLog:      log.New(os.Stdout, "ERROR: -> ", log.Ldate|log.Ltime|log.Lshortfile),
 		ErrorChan:     make(chan error),
 		ErrorDoneChan: make(chan bool),
 		WG:            sync.WaitGroup{},
+		Context:       context.Background(),
 	}
+
 }
