@@ -134,7 +134,7 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	// insert user
 
-	id, err := dbrepo.InsertUser(&user)
+	_, err = dbrepo.InsertUser(&user)
 
 	if err != nil {
 		if err := utils.NewUtils(app).ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
@@ -143,9 +143,6 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	user.ID = id
-
 	if err := utils.NewUtils(app).WriteJSON(w, r, "user", user, http.StatusOK); err != nil {
 		http.Error(w, "error writing json to response writer", http.StatusInternalServerError)
 		return

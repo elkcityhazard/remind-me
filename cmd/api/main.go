@@ -26,40 +26,6 @@ func main() {
 
 	appInit()
 
-	app.WG.Add(1)
-	go listenForErrors(app.ErrorChan, app.ErrorDoneChan)
-
-	shutdownCtx, cancel := context.WithCancel(context.Background())
-
-	app.WG.Add(1)
-
-	go startHTTPServer(shutdownCtx, &app.WG)
-
-	signalCh := make(chan os.Signal, 1)
-
-	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
-
-	<-signalCh
-
-	fmt.Println("Shutting down server")
-
-	cancel()
-
-	app.WG.Wait()
-
-	app.ErrorDoneChan <- true
-	app.Mailer.MailerDoneChan <- true
-	defer app.DB.Close()
-
-	close(app.ErrorChan)
-	close(app.ErrorDoneChan)
-	close(app.Mailer.MailerDoneChan)
-	close(app.Mailer.MailerDataChan)
-	close(app.Mailer.MailerErrorChan)
-
-	fmt.Println("Shutdown Completed")
-	os.Exit(1)
-
 }
 
 func startHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
@@ -97,15 +63,12 @@ func startHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
 
 func appInit() {
 	app = config.NewAppConfig()
-
-	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com")
-
-	app.Mailer = mailHandler
-
 	parseFlags()
+	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com")
+	app.Mailer = mailHandler
 	app.Session = getSession()
-
 	app.WG.Add(1)
+
 	go app.Mailer.ListenForMail(&app.WG)
 
 	handlers.NewHandlers(&app)
@@ -124,6 +87,39 @@ func appInit() {
 
 	handlers.NewHandlers(&app) // we are passing this to the handlers package.  we might want to upgrade it to an interface later
 
+	app.WG.Add(1)
+	go listenForErrors(app.ErrorChan, app.ErrorDoneChan)
+
+	shutdownCtx, cancel := context.WithCancel(context.Background())
+
+	app.WG.Add(1)
+
+	go startHTTPServer(shutdownCtx, &app.WG)
+
+	signalCh := make(chan os.Signal, 1)
+
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+
+	<-signalCh
+
+	fmt.Println("Shutting down server")
+
+	cancel()
+
+	app.WG.Wait()
+
+	app.ErrorDoneChan <- true
+	app.Mailer.MailerDoneChan <- true
+	defer app.DB.Close()
+
+	close(app.ErrorChan)
+	close(app.ErrorDoneChan)
+	close(app.Mailer.MailerDoneChan)
+	close(app.Mailer.MailerDataChan)
+	close(app.Mailer.MailerErrorChan)
+
+	fmt.Println("Shutdown Completed")
+	os.Exit(1)
 }
 
 func listenForErrors(eChan <-chan error, eDoneChan <-chan bool) {
