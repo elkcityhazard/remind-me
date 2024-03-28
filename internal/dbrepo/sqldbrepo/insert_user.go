@@ -35,7 +35,7 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 			return
 		}
 
-		userRow, err := tx.ExecContext(ctx, "INSERT INTO User (Email, CreatedAt, UpdatedAt, Scope, IsActive, Version) VALUES (?,?,?, 2, 0, 1)", u.Email, time.Now(), time.Now())
+		userRow, err := tx.ExecContext(ctx, "INSERT INTO User (Email, CreatedAt, UpdatedAt, Scope, IsActive, Version) VALUES (?,NOW(),NOW(), 2, 0, 1)", u.Email)
 
 		if err != nil {
 			tx.Rollback()
