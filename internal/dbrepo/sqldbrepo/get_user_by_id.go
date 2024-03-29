@@ -21,11 +21,11 @@ func (sqdb *SQLDBRepo) GetUserById(id int64) (*models.User, error) {
 		defer close(userChan)
 		defer close(errorChan)
 
-		stmt := `SELECT User.ID, User.Email, User.IsActive, User.Version, User.Scope, PhoneNumber.Plaintext, Password.Hash FROM User INNER JOIN Password ON User.ID = Password.UserID INNER JOIN PhoneNumber ON User.ID = PhoneNumber.UserID WHERE User.ID = ?`
+		stmt := `SELECT User.ID, User.Email, User.CreatedAt, User.UpdatedAt, User.IsActive, User.Version, User.Scope, PhoneNumber.ID, PhoneNumber.Plaintext, PhoneNumber.CreatedAt, PhoneNumber.UpdatedAt, PhoneNumber.Version, Password.ID, Password.Hash, Password.CreatedAt, Password.UpdatedAt, Password.Version FROM User INNER JOIN Password ON User.ID = Password.UserID INNER JOIN PhoneNumber ON User.ID = PhoneNumber.UserID WHERE User.ID = ?`
 
 		var u = models.User{}
 
-		err := sqdb.Config.DB.QueryRowContext(ctx, stmt, id).Scan(&u.ID, &u.Email, &u.IsActive, &u.Version, &u.Scope, &u.PhoneNumber.Plaintext, &u.Password.Hash)
+		err := sqdb.Config.DB.QueryRowContext(ctx, stmt, id).Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt, &u.IsActive, &u.Version, &u.Scope, &u.PhoneNumber.ID, &u.PhoneNumber.Plaintext, &u.PhoneNumber.CreatedAt, &u.PhoneNumber.UpdatedAt, &u.PhoneNumber.Version, &u.Password.ID, &u.Password.Hash, &u.Password.CreatedAt, &u.Password.UpdatedAt, &u.Password.Version)
 
 		if err != nil {
 			sqdb.Config.ErrorChan <- err

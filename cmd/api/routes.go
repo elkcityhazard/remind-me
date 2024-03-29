@@ -29,6 +29,7 @@ func UserRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/add", handlers.InsertUser)
 	r.Get("/{id}", handlers.GetUserByID)
+	r.Get("/{email}", handlers.GetUserByEmail)
 
 	return r
 }
