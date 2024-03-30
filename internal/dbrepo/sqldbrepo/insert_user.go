@@ -11,6 +11,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	notActive int = iota
+	active
+)
+
 // InsertUser accepts a pointer declaration to a user, and inserts it into the database.
 // It will return the User ID, and an error if there are any
 func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
@@ -29,14 +34,12 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		defer sqdb.Config.WG.Done()
 
 		tx, err := sqdb.Config.DB.Begin()
-
 		if err != nil {
 			errorChan <- err
 			return
 		}
 
-		userRow, err := tx.ExecContext(ctx, "INSERT INTO User (Email, CreatedAt, UpdatedAt, Scope, IsActive, Version) VALUES (?,NOW(),NOW(), 2, 0, 1)", u.Email)
-
+		userRow, err := tx.ExecContext(ctx, "INSERT INTO User (Email, CreatedAt, UpdatedAt, Scope, IsActive, Version) VALUES (?,NOW(),NOW(), 2, ?, 1)", u.Email, notActive)
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -44,7 +47,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		userID, err := userRow.LastInsertId()
-
 		if err != nil {
 			errorChan <- err
 			return
@@ -53,7 +55,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		u.ID = userID
 
 		pwRow, err := tx.ExecContext(ctx, "INSERT INTO Password (Hash, UserID, CreatedAt, UpdatedAt, Version) VALUES (?,?, NOW(), NOW(), 1)", u.Password.Hash, u.ID)
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -61,7 +62,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		pwID, err := pwRow.LastInsertId()
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -71,7 +71,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		u.Password.ID = pwID
 
 		phoneRow, err := tx.ExecContext(ctx, "INSERT INTO PhoneNumber (Plaintext, UserID, CreatedAt, UpdatedAt, Version) Values (?, ?, NOW(), NOW(), 1)", u.PhoneNumber.Plaintext, userID)
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -79,7 +78,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		phoneID, err := phoneRow.LastInsertId()
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -89,7 +87,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		u.PhoneNumber.ID = phoneID
 
 		activationToken, err := utils.NewUtils(sqdb.Config).GenerateActivationToken()
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -97,7 +94,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		encryptedToken, err := bcrypt.GenerateFromPassword([]byte(activationToken), 10)
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -105,7 +101,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		_, err = tx.ExecContext(ctx, "INSERT INTO ActivationToken (UserID, Token, CreatedAt, UpdatedAt, IsProcessed) Values(?,?, NOW(), NOW(), false)", userID, encryptedToken)
-
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -113,7 +108,6 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		err = tx.Commit()
-
 		if err != nil {
 			errorChan <- err
 			return
@@ -130,18 +124,14 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		}
 
 		sqdb.Config.Mailer.MailerDataChan <- &ed
-
 	}()
 
 	err := <-errorChan
-
 	if err != nil {
-
 		if mysqlErr, ok := err.(*mysql.MySQLError); ok {
 			switch mysqlErr.Number {
 			case 1062: // MySQL error code for duplicate key
 				return 0, errors.New("something has gone awry")
-
 			}
 			return 0, err
 		}

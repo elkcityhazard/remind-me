@@ -35,7 +35,7 @@ type User struct {
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
 	Scope       int         `json:"-"`
-	IsActive    bool        `json:"is_active"`
+	IsActive    int         `json:"is_active"`
 	Version     int         `json:"version"`
 }
 

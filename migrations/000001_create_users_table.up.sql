@@ -8,4 +8,5 @@ CREATE TABLE IF NOT EXISTS User (
     Version INT
 );
 
-CREATE INDEX idx_user_email ON User(Email);
+CREATE INDEX user_email_idx ON User (Email);
+

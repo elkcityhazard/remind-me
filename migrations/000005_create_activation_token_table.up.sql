@@ -7,6 +7,5 @@ CREATE TABLE IF NOT EXISTS ActivationToken (
  IsProcessed BOOLEAN DEFAULT FALSE
 );
 
-CREATE INDEX user_id_idx ON ActivationToken (UserID);
 
 

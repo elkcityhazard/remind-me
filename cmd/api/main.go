@@ -16,10 +16,12 @@ import (
 	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
 	"github.com/elkcityhazard/remind-me/internal/handlers"
 	"github.com/elkcityhazard/remind-me/internal/mailer"
+	"github.com/elkcityhazard/remind-me/pkg/utils"
 )
 
 var (
-	app config.AppConfig
+	app        config.AppConfig
+	utilWriter utils.Utils
 )
 
 func main() {
@@ -43,6 +45,10 @@ func startHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
 	// Start the server in a goroutine
 	go func() {
 		fmt.Println("starting server...")
+
+		app.WG.Add(1)
+		go listenForErrors(app.InfoChan, app.ErrorChan, app.ErrorDoneChan)
+
 		if err := srv.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
 			log.Fatalf("Server startup failed: %v", err)
 		}
@@ -64,6 +70,7 @@ func startHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
 func appInit() {
 	app = config.NewAppConfig()
 	parseFlags()
+	utilWriter = *utils.NewUtils(&app)
 	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com")
 	app.Mailer = mailHandler
 	app.Session = getSession()
@@ -72,6 +79,7 @@ func appInit() {
 	go app.Mailer.ListenForMail(&app.WG)
 
 	handlers.NewHandlers(&app)
+	handlers.PassUtilToHandlers(&utilWriter)
 
 	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
 	if err != nil {
@@ -86,9 +94,6 @@ func appInit() {
 	}
 
 	handlers.NewHandlers(&app) // we are passing this to the handlers package.  we might want to upgrade it to an interface later
-
-	app.WG.Add(1)
-	go listenForErrors(app.ErrorChan, app.ErrorDoneChan)
 
 	shutdownCtx, cancel := context.WithCancel(context.Background())
 
@@ -112,6 +117,7 @@ func appInit() {
 	app.Mailer.MailerDoneChan <- true
 	defer app.DB.Close()
 
+	close(app.InfoChan)
 	close(app.ErrorChan)
 	close(app.ErrorDoneChan)
 	close(app.Mailer.MailerDoneChan)
@@ -122,12 +128,13 @@ func appInit() {
 	os.Exit(1)
 }
 
-func listenForErrors(eChan <-chan error, eDoneChan <-chan bool) {
+func listenForErrors(infoChan <-chan string, eChan <-chan error, eDoneChan <-chan bool) {
 	defer app.WG.Done()
 	for {
 		select {
+		case info := <-infoChan:
+			app.InfoLog.Println(info)
 		case err := <-eChan:
-			app.ErrorLog.Print(err)
 			app.ErrorLog.Print(err.Error())
 		case <-eDoneChan:
 			return

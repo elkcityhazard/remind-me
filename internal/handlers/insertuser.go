@@ -14,9 +14,9 @@ import (
 	"github.com/elkcityhazard/remind-me/pkg/utils"
 )
 
-func InsertUser(w http.ResponseWriter, r *http.Request) {
+// inactive is sent as 0, active is sent as 1
 
-	util := utils.NewUtils(app)
+func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "POST" {
 		headers := make(http.Header)
@@ -55,7 +55,6 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	err = json.Unmarshal(body, &user)
-
 	if err != nil {
 		log.Println(err)
 		app.ErrorChan <- err
@@ -75,9 +74,9 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	e := cerrors.NewErrors()
 
-	var email = user.Email
-	var password1 = user.Password.Plaintext1
-	var password2 = user.Password.Plaintext2
+	email := user.Email
+	password1 := user.Password.Plaintext1
+	password2 := user.Password.Plaintext2
 
 	// do passwords match?
 
@@ -89,14 +88,13 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 	// is email valid?
 
 	_, err = mail.ParseAddress(email)
-
 	if err != nil {
 		e.Add("email", "invalid email address")
 	}
 
 	// is phone number valid?
 
-	isValidPhoneNumber := util.ValidatePhoneNumber(user.PhoneNumber.Plaintext)
+	isValidPhoneNumber := utilWriter.ValidatePhoneNumber(user.PhoneNumber.Plaintext)
 
 	if !isValidPhoneNumber {
 		e.Add("phone_number", "invalid phone number")
@@ -104,9 +102,9 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	// salt and hash password
 
-	encodedPW := util.CreateArgonHash(user.Password.Plaintext1)
+	encodedPW := utilWriter.CreateArgonHash(user.Password.Plaintext1)
 
-	validate := util.VerifyArgonHash(user.Password.Plaintext1, encodedPW)
+	validate := utilWriter.VerifyArgonHash(user.Password.Plaintext1, encodedPW)
 
 	if !validate {
 		e.Add("password_1", "password does not validate")
@@ -135,7 +133,6 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 	// insert user
 
 	_, err = dbrepo.InsertUser(&user)
-
 	if err != nil {
 		if err := utils.NewUtils(app).ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
 			http.Error(w, "error writing json to response writer", http.StatusInternalServerError)

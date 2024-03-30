@@ -21,6 +21,7 @@ type AppConfig struct {
 	Port          string // ":8080"
 	InfoLog       *log.Logger
 	ErrorLog      *log.Logger
+	InfoChan      chan (string)
 	ErrorChan     chan error
 	ErrorDoneChan chan bool
 	WG            sync.WaitGroup
@@ -35,6 +36,7 @@ func NewAppConfig() AppConfig {
 		InfoLog:       log.New(os.Stdout, "INFO: -> ", log.Ldate|log.Ltime),
 		ErrorLog:      log.New(os.Stdout, "ERROR: -> ", log.Ldate|log.Ltime|log.Lshortfile),
 		ErrorChan:     make(chan error),
+		InfoChan:      make(chan string),
 		ErrorDoneChan: make(chan bool),
 		WG:            sync.WaitGroup{},
 		Context:       context.Background(),

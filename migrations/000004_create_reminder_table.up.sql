@@ -10,7 +10,3 @@ CREATE TABLE IF NOT EXISTS Reminder (
     IsProcessed BOOLEAN DEFAULT FALSE
 );
 
-
-CREATE INDEX idx_reminder_title ON Reminder(Title);
-
-CREATE INDEX idx_reminder_userid ON Reminder(UserID);

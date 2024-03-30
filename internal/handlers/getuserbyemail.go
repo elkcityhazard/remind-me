@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
@@ -25,6 +27,9 @@ func GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 	user, err := dbRepo.GetUserByEmail(email)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("something went wrong, please try different input")
+		}
 		if err := utils.NewUtils(app).ErrorJSON(w, r, "error", err.Error(), 400); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
