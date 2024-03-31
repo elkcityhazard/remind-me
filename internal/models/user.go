@@ -5,10 +5,19 @@ import (
 	"time"
 )
 
+type ActivationToken struct {
+	ID          int64     `json:"id"`
+	UserID      int64     `json:"user_id"`
+	Token       []byte    `json:"token"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	IsProcessed int       `json:"is_processed"`
+}
+
 type Password struct {
 	ID         int64     `json:"id"`
-	Plaintext1 string    `json:"plaintext_1"`
-	Plaintext2 string    `json:"plaintext_2"`
+	Plaintext1 string    `json:""`
+	Plaintext2 string    `json:""`
 	Hash       []byte    `json:"-"`
 	Salt       []byte    `json:"-"`
 	UserID     int64     `json:"-"`
@@ -34,7 +43,7 @@ type User struct {
 	PhoneNumber PhoneNumber `json:"phone_number"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
-	Scope       int         `json:"-"`
+	Scope       int         `json:"scope"`
 	IsActive    int         `json:"is_active"`
 	Version     int         `json:"version"`
 }

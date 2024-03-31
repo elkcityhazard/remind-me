@@ -17,6 +17,21 @@ import (
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
+	userIDExists := app.SessionManager.Exists(r.Context(), "id")
+
+	if !userIDExists {
+		err := errors.New("this route requires authorization")
+		if err = utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		return
+	}
+
+	storedUserID := app.SessionManager.GetInt64(r.Context(), "id")
+
+	// we create temporary struct so we can check for default nil pointer values
+
 	type tmpPassword struct {
 		ID         *int64    `json:"id"`
 		Hash       []byte    `json:"-"`
@@ -74,6 +89,16 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	fetchedUser, err := dbConn.GetUserById(idParam)
 
 	if err != nil {
+		if err = utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		return
+	}
+
+	if fetchedUser.ID != storedUserID {
+		err = errors.New("you are not authorized to update this resource")
+
 		if err = utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

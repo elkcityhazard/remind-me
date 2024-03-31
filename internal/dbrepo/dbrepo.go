@@ -8,4 +8,5 @@ type DBServicer interface {
 	GetUserbyEmail(email string) (*models.User, error)
 	UpdateUser(*models.User) (int, error) // int is version
 	DeleteUser(int64) error
+	ActiveUser(activationToken string, id int64) (*models.User, error)
 }

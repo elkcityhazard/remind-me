@@ -8,7 +8,6 @@ import (
 	"github.com/elkcityhazard/remind-me/internal/models"
 	"github.com/elkcityhazard/remind-me/pkg/utils"
 	"github.com/go-sql-driver/mysql"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -39,7 +38,7 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 			return
 		}
 
-		userRow, err := tx.ExecContext(ctx, "INSERT INTO User (Email, CreatedAt, UpdatedAt, Scope, IsActive, Version) VALUES (?,NOW(),NOW(), 2, ?, 1)", u.Email, notActive)
+		userRow, err := tx.ExecContext(ctx, "INSERT INTO User (Email, CreatedAt, UpdatedAt, Scope, IsActive, Version) VALUES (?,NOW(),NOW(), ?, ?, 1)", u.Email, u.Scope, notActive)
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -93,14 +92,7 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 			return
 		}
 
-		encryptedToken, err := bcrypt.GenerateFromPassword([]byte(activationToken), 10)
-		if err != nil {
-			tx.Rollback()
-			errorChan <- err
-			return
-		}
-
-		_, err = tx.ExecContext(ctx, "INSERT INTO ActivationToken (UserID, Token, CreatedAt, UpdatedAt, IsProcessed) Values(?,?, NOW(), NOW(), false)", userID, encryptedToken)
+		_, err = tx.ExecContext(ctx, "INSERT INTO ActivationToken (UserID, Token, CreatedAt, UpdatedAt, IsProcessed) Values(?,?, NOW(), NOW(), false)", userID, activationToken)
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
@@ -116,6 +108,7 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 		emailData := make(map[string]interface{})
 
 		emailData["ID"] = activationToken
+		emailData["UserID"] = userID
 
 		ed := models.EmailData{
 			Recipient:    u.Email,

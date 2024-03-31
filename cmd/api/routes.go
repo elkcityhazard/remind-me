@@ -15,8 +15,7 @@ func routes(app *config.AppConfig) *chi.Mux {
 
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
-
-	mux.Use(app.Session.LoadAndSave)
+	mux.Use(SessionLoad)
 
 	mux.Mount("/api/v1", PingRouter(app))
 
@@ -27,10 +26,13 @@ func routes(app *config.AppConfig) *chi.Mux {
 
 func UserRoutes() http.Handler {
 	r := chi.NewRouter()
+
 	r.Post("/add", handlers.InsertUser)
 	r.Get("/id/{id}", handlers.GetUserByID)
+	r.Put("/id/{id}", handlers.UpdateUser)
+	r.Delete("/id/{id}", handlers.DeleteUser)
 	r.Get("/email/{email}", handlers.GetUserByEmail)
-	r.Put("/update/{id}", handlers.UpdateUser)
+	r.Put("/activation", handlers.HandleActivation)
 
 	return r
 }
@@ -39,6 +41,9 @@ func PingRouter(app *config.AppConfig) http.Handler {
 	util := utils.NewUtils(app)
 
 	r := chi.NewRouter()
+
+	r.Get("/login", handlers.HandleSignIn)
+	r.Get("/logout", handlers.HandleLogoutUser)
 
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		type pingStatus struct {

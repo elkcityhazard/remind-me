@@ -5,7 +5,7 @@ Hi,
 
 Thanks for signing up for a Remind Me account. We're excited to have you on board!
 
-You Need to go to the following link to activate your account: https://remind-me.com/user/activation/{{.ID}}
+You Need to go to the following link to activate your account: https://remind-me.com/users/activation?token={{.ID}}&id={{.UserID}}
 
 Thanks,
 
@@ -24,7 +24,7 @@ Andrew From The Remind Me Team
 <body>
     <p>Hi,</p>
     <p>Thanks for signing up for a Remind Me account. We're excited to have you on board!</p>
-    <p>You Need to go to the following link to activate your account: <a href="https://remind-me.com/user/activation/{{.ID}}" title="account activation" aria-label="activation link">Active Account</a>.</p>
+    <p>You Need to go to the following link to activate your account: <a href="https://remind-me.com/users/activation?token={{.ID}}&id={{.UserID}}" title="account activation" aria-label="activation link">Active Account</a>.</p>
     <p>Thanks,</p>
     <p>Andrew From Remind Me</p>
 </body>

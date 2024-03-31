@@ -73,7 +73,6 @@ func appInit() {
 	utilWriter = *utils.NewUtils(&app)
 	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com")
 	app.Mailer = mailHandler
-	app.Session = getSession()
 	app.WG.Add(1)
 
 	go app.Mailer.ListenForMail(&app.WG)

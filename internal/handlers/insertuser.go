@@ -14,6 +14,12 @@ import (
 	"github.com/elkcityhazard/remind-me/pkg/utils"
 )
 
+const (
+	userScope int = iota
+	adminScope
+	superUserScope
+)
+
 // inactive is sent as 0, active is sent as 1
 
 func InsertUser(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +81,13 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 	e := cerrors.NewErrors()
 
 	email := user.Email
+
+	_, err = mail.ParseAddress(email)
+
+	if err != nil {
+		e.Add("email", "email is incorrectly formatted")
+	}
+
 	password1 := user.Password.Plaintext1
 	password2 := user.Password.Plaintext2
 
@@ -127,6 +140,10 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	// set all new users to userScope
+
+	user.Scope = userScope
 
 	dbrepo := sqldbrepo.NewSQLDBRepo(app)
 
