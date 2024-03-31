@@ -2,13 +2,16 @@ package main
 
 import "net/http"
 
-func RequiredAuth(next http.Handler) http.Handler {
+func RequiresAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		idExists := app.SessionManager.Exists(r.Context(), "id")
 
 		if !idExists {
-			http.Redirect(w, r, "/api/v1/error", http.StatusSeeOther)
+			if err := utilWriter.ErrorJSON(w, r, "error", "this is a protected resource, please login", http.StatusBadRequest); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			return
 		}
 

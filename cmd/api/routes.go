@@ -17,8 +17,7 @@ func routes(app *config.AppConfig) *chi.Mux {
 	mux.Use(middleware.Recoverer)
 	mux.Use(SessionLoad)
 
-	mux.Mount("/api/v1", PingRouter(app))
-
+	mux.Mount("/api/v1", PublicRoutes(app))
 	mux.Mount("/api/v1/users", UserRoutes())
 
 	return mux
@@ -28,23 +27,29 @@ func UserRoutes() http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/add", handlers.InsertUser)
-	r.Get("/id/{id}", handlers.GetUserByID)
-	r.Put("/id/{id}", handlers.UpdateUser)
-	r.Delete("/id/{id}", handlers.DeleteUser)
-	r.Get("/email/{email}", handlers.GetUserByEmail)
 	r.Put("/activation", handlers.HandleActivation)
+
+	//sub route to handle auth required resources
+	r.Route("/protected", func(r chi.Router) {
+
+		r.Use(RequiresAuth)
+		r.Get("/id/{id}", handlers.GetUserByID)
+		r.Put("/id/{id}", handlers.UpdateUser)
+		r.Delete("/id/{id}", handlers.DeleteUser)
+		r.Get("/email/{email}", handlers.GetUserByEmail)
+
+	})
 
 	return r
 }
 
-func PingRouter(app *config.AppConfig) http.Handler {
+func PublicRoutes(app *config.AppConfig) http.Handler {
 	util := utils.NewUtils(app)
 
 	r := chi.NewRouter()
 
 	r.Get("/login", handlers.HandleSignIn)
 	r.Get("/logout", handlers.HandleLogoutUser)
-
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		type pingStatus struct {
 			Code int    `json:"status_code"`
