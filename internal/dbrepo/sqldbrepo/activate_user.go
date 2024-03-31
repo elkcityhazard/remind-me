@@ -2,6 +2,7 @@ package sqldbrepo
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/models"
@@ -34,10 +35,12 @@ func (sqdb *SQLDBRepo) ActivateUser(activationToken string, id int64) (*models.U
 		t := &models.ActivationToken{}
 		u := &models.User{}
 
+		u.ID = id
+
 		err = tx.QueryRowContext(ctx, `SELECT User.ID, User.Email, User.CreatedAt, User.UpdatedAt, User.Scope, User.IsActive, User.Version, 
-									   ActivationToken.ID, ActivationToken.UserId, ActivationToken.Token, ActivationToken.CreatedAt, ActivationToken.UpdatedAt, ActivationToken.IsProcessed 
-									   FROM User INNER JOIN ActivationToken ON User.ID = ActivationToken.UserID
-									   WHERE ActivationToken.Token = ? AND ActivationToken.IsProcessed != 1`, activationToken).Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt, &u.Scope, &u.IsActive, &u.Version, &t.ID, &t.UserID, &t.Token, &t.CreatedAt, &t.UpdatedAt, &t.IsProcessed)
+		ActivationToken.ID, ActivationToken.UserId, ActivationToken.Token, ActivationToken.CreatedAt, ActivationToken.UpdatedAt, ActivationToken.IsProcessed 
+		FROM User INNER JOIN ActivationToken ON User.ID = ActivationToken.UserID
+		WHERE ActivationToken.Token = ? AND User.ID = ? AND ActivationToken.IsProcessed != 1`, activationToken, id).Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt, &u.Scope, &u.IsActive, &u.Version, &t.ID, &t.UserID, &t.Token, &t.CreatedAt, &t.UpdatedAt, &t.IsProcessed)
 
 		if err != nil {
 			tx.Rollback()
@@ -73,9 +76,10 @@ func (sqdb *SQLDBRepo) ActivateUser(activationToken string, id int64) (*models.U
 			return
 		}
 
-		updatedUser, err := sqdb.GetUserById(u.ID)
+		updatedUser, err := sqdb.GetUserById(id)
 
 		if err != nil {
+			log.Println(id, u.ID, err)
 			errorChan <- err
 			return
 		}

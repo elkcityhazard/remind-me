@@ -7,7 +7,7 @@ import (
 	"github.com/elkcityhazard/remind-me/internal/models"
 )
 
-func (sqdb *SQLDBRepo) InsertReminder(r *models.Reminder) (int64, error) {
+func (sqdb *SQLDBRepo) InsertReminder(r *models.Reminder) (*int64, error) {
 	ctx, cancel := context.WithTimeout(sqdb.Config.Context, time.Second*10)
 
 	defer cancel()
@@ -104,11 +104,11 @@ func (sqdb *SQLDBRepo) InsertReminder(r *models.Reminder) (int64, error) {
 	err := <-errorChan
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	id := <-idChan
 
-	return id, nil
+	return &id, nil
 
 }

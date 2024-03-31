@@ -92,7 +92,7 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 			return
 		}
 
-		_, err = tx.ExecContext(ctx, "INSERT INTO ActivationToken (UserID, Token, CreatedAt, UpdatedAt, IsProcessed) Values(?,?, NOW(), NOW(), false)", userID, activationToken)
+		_, err = tx.ExecContext(ctx, "INSERT INTO ActivationToken (UserID, Token, CreatedAt, UpdatedAt, IsProcessed) Values(?,?, NOW(), NOW(), ?)", userID, activationToken, notActive)
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err

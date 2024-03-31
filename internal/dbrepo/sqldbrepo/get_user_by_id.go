@@ -21,11 +21,13 @@ func (sqdb *SQLDBRepo) GetUserById(id int64) (*models.User, error) {
 		defer close(userChan)
 		defer close(errorChan)
 
-		stmt := `SELECT User.ID, User.Email, User.CreatedAt, User.UpdatedAt, User.IsActive, User.Version, User.Scope, PhoneNumber.ID, PhoneNumber.Plaintext, PhoneNumber.CreatedAt, PhoneNumber.UpdatedAt, PhoneNumber.Version, Password.ID, Password.Hash, Password.CreatedAt, Password.UpdatedAt, Password.Version FROM User INNER JOIN Password ON User.ID = Password.UserID INNER JOIN PhoneNumber ON User.ID = PhoneNumber.UserID WHERE User.ID = ?`
+		//stmt := `SELECT Reminder.ID, Reminder.Title, Reminder.Content, Reminder.UserID, Reminder.DueDate, Reminder.CreatedAt, Reminder.UpdatedAt, Reminder.Version, Schedule.ID, Schedule.ReminderID, Schedule.CreatedAt, Schedule.UpdatedAt, Schedule.DispatchTime, Schedule.Version FROM Reminder INNER JOIN Schedule ON Schedule.ReminderID = Reminder.ID INNER JOIN User ON User.ID = Reminder.UserID WHERE User.ID = ?`
+
+		stmt := `SELECT User.ID, User.Email, User.CreatedAt, User.UpdAtedAt, User.Scope, User.IsActive, User.Version, PhoneNumber.ID, PhoneNumber.Plaintext, PhoneNumber.UserID, PhoneNumber.CreatedAt, PhoneNumber.UpdatedAt, PhoneNumber.Version FROM User INNER JOIN PhoneNumber ON PhoneNumber.UserID = User.ID WHERE User.ID = ? AND User.IsActive > 0`
 
 		u := models.User{}
 
-		err := sqdb.Config.DB.QueryRowContext(ctx, stmt, id).Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt, &u.IsActive, &u.Version, &u.Scope, &u.PhoneNumber.ID, &u.PhoneNumber.Plaintext, &u.PhoneNumber.CreatedAt, &u.PhoneNumber.UpdatedAt, &u.PhoneNumber.Version, &u.Password.ID, &u.Password.Hash, &u.Password.CreatedAt, &u.Password.UpdatedAt, &u.Password.Version)
+		err := sqdb.Config.DB.QueryRowContext(ctx, stmt, id).Scan(&u.ID, &u.Email, &u.CreatedAt, &u.UpdatedAt, &u.Scope, &u.IsActive, &u.Version, &u.PhoneNumber.ID, &u.PhoneNumber.Plaintext, &u.PhoneNumber.UserID, &u.PhoneNumber.CreatedAt, &u.PhoneNumber.UpdatedAt, &u.PhoneNumber.Version)
 		if err != nil {
 			errorChan <- err
 			return

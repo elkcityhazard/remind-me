@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -23,6 +24,7 @@ func HandleActivation(w http.ResponseWriter, r *http.Request) {
 	user, err := sqldbrepo.GetDatabaseConnection().ActivateUser(token, id)
 
 	if err != nil {
+		fmt.Println(err)
 		if err = utilWriter.ErrorJSON(w, r, "error", err.Error(), 400); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

@@ -33,7 +33,7 @@ func UserRoutes() http.Handler {
 	//sub route to handle auth required resources
 	r.Route("/protected", func(r chi.Router) {
 
-		r.Use(RequiresAuth)
+		//r.Use(RequiresAuth)
 		r.Get("/id/{id}", handlers.GetUserByID)
 		r.Put("/id/{id}", handlers.UpdateUser)
 		r.Delete("/id/{id}", handlers.DeleteUser)
@@ -50,7 +50,7 @@ func ReminderRoutes() http.Handler {
 	//r.Use(RequiresAuth)
 
 	r.Post("/add", handlers.HandleInsertReminder)
-
+	r.Get("/{id}", handlers.HandleGetUserReminders)
 	return r
 }
 
