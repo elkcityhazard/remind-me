@@ -8,7 +8,7 @@ func RequiresAuth(next http.Handler) http.Handler {
 		idExists := app.SessionManager.Exists(r.Context(), "id")
 
 		if !idExists {
-			if err := utilWriter.ErrorJSON(w, r, "error", "this is a protected resource, please login", http.StatusBadRequest); err != nil {
+			if err := utilWriter.ErrorJSON(w, r, "error", "this is a protected resource, please login", http.StatusUnauthorized); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

@@ -19,6 +19,7 @@ func routes(app *config.AppConfig) *chi.Mux {
 
 	mux.Mount("/api/v1", PublicRoutes(app))
 	mux.Mount("/api/v1/users", UserRoutes())
+	mux.Mount("/api/v1/reminders", ReminderRoutes())
 
 	return mux
 }
@@ -39,6 +40,16 @@ func UserRoutes() http.Handler {
 		r.Get("/email/{email}", handlers.GetUserByEmail)
 
 	})
+
+	return r
+}
+
+func ReminderRoutes() http.Handler {
+	r := chi.NewRouter()
+
+	//r.Use(RequiresAuth)
+
+	r.Post("/add", handlers.HandleInsertReminder)
 
 	return r
 }

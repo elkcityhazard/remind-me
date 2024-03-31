@@ -9,4 +9,7 @@ type DBServicer interface {
 	UpdateUser(*models.User) (int, error) // int is version
 	DeleteUser(int64) error
 	ActiveUser(activationToken string, id int64) (*models.User, error)
+
+	InsertReminder(r *models.Reminder) (int64, error)
+	InsertSchedule(s *models.Schedule) (int64, error)
 }
