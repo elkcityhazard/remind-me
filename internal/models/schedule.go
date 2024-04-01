@@ -9,4 +9,5 @@ type Schedule struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 	DispatchTime time.Time `json:"dispatch_time"`
 	Version      int       `json:"version"`
+	IsProcessed  int       `json:"is_processed"`
 }

@@ -2,6 +2,7 @@ package sqldbrepo
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/config"
 	_ "github.com/go-sql-driver/mysql"
@@ -41,6 +42,10 @@ func (sqdb *SQLDBRepo) NewDatabaseConn() (*sql.DB, error) {
 		return nil, err
 	}
 
+	conn.SetMaxIdleConns(10)
+	conn.SetMaxOpenConns(100)
+	conn.SetConnMaxIdleTime(time.Minute * 5)
+	conn.SetConnMaxLifetime(time.Hour)
 	// we pass it back up to app config as well in case we need it later
 
 	sqdb.Config.DB = conn

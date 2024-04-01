@@ -10,3 +10,29 @@ CREATE TABLE IF NOT EXISTS Reminder (
     FOREIGN KEY (UserID) REFERENCES User(ID) ON DELETE CASCADE
 );  
 
+
+INSERT INTO Reminder
+(Title, Content, UserID, DueDate, Version)
+VALUES
+    (
+        "Go To Dentist",
+        "You Have A Dentist Appointment With Dr. Doom",
+        1,
+        TIMESTAMP(DATE_ADD(NOW(), INTERVAL 1 WEEK)),
+        1
+    ),
+    (
+        "Go To Doctor",
+        "You have to get your foot removed",
+        1,
+        TIMESTAMP(DATE_ADD(NOW(), INTERVAL 2 WEEK)),
+         1
+    ),
+    (
+        "Finish Book Report",
+        "Must finish book report on 1984",
+        1,
+         TIMESTAMP(DATE_ADD(NOW(), INTERVAL 3 WEEK)),
+        1
+    );
+

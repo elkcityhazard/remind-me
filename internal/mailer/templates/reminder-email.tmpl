@@ -1,0 +1,37 @@
+{{define "subject"}}Reminder About Your Upcoming TODO: {{ .Reminder.Title }}{{end}}
+
+{{define "plainBody"}}
+Hello {{ .User.Email }},
+
+This is a gentle reminder about your upcoming TODO:
+
+Title: {{ .Reminder.Title }}
+Message: {{ .Reminder.Content }}
+Due Date: {{ .Reminder.DueDate }}
+
+Dispatch Time: {{ .Schedule.DispatchTime }}
+
+
+{{end}}
+
+{{define "htmlBody"}}
+<!doctype html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+
+<body>
+    <p>Hi, {{.User.Email}}</p>
+    <p>This is a gentle reminder about your upcoming TODO:</p>
+    <p><strong>Title:</strong> {{ .Reminder.Title }}</p>
+<p><strong>Message:</strong> {{ .Reminder.Content }}</p>
+<p><strong>Due Date:</strong> {{ .Reminder.DueDate }}</p>
+
+<p><stong>Dispatch Time:</strong> {{ .Schedule.DispatchTime }}<p>
+</body>
+
+</html>
+{{end}}

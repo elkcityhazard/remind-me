@@ -12,4 +12,5 @@ type DBServicer interface {
 
 	InsertReminder(r *models.Reminder) (int64, error)
 	GetUserRemindersByID(id int64) ([]*models.Reminder, error)
+	ProcessRemindersForUser(id int64) ([]*models.Reminder, error)
 }
