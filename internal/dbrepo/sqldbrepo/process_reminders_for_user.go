@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/models"
@@ -123,6 +125,13 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 			}
 
 			reminderChan <- &srm.Reminder
+
+			req, _ := http.NewRequest("POST", "https://ntfy.sh/megalawnalien_reminders_3739",
+				strings.NewReader(fmt.Sprintf("Due: %s - %s", srm.Reminder.DueDate.Format("Jan 02, 2006, 03:04:05pm"), srm.Reminder.Content)))
+			req.Header.Set("Title", srm.Reminder.Title)
+			req.Header.Set("Priority", "default")
+			req.Header.Set("Tags", "envelope")
+			http.DefaultClient.Do(req)
 
 			sqdb.Config.Mailer.MailerDataChan <- &emailPayload
 

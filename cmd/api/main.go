@@ -31,15 +31,18 @@ func main() {
 
 }
 
-func pollScheduledReminders(doneChan <-chan bool) {
+func pollScheduledReminders(doneChan <-chan bool, wg *sync.WaitGroup) {
 
 	ticker := time.NewTicker(time.Second * 5)
 
 	go func() {
 
+		defer wg.Done()
+
 		for {
 			select {
 			case <-doneChan:
+				app.InfoLog.Print("trying to stop the ticker...")
 				ticker.Stop()
 				return
 			case t := <-ticker.C:
@@ -114,8 +117,6 @@ func appInit() {
 
 	app.DB = dbConn
 
-	pollScheduledReminders(app.ReminderDoneChan)
-
 	err = app.DB.Ping()
 	if err != nil {
 		app.ErrorChan <- err
@@ -133,6 +134,10 @@ func appInit() {
 
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
+	app.WG.Add(1)
+
+	go pollScheduledReminders(app.ReminderDoneChan, &app.WG)
+
 	<-signalCh
 
 	fmt.Println("Shutting down server")
@@ -140,7 +145,7 @@ func appInit() {
 	cancel()
 
 	app.WG.Wait()
-
+	app.ReminderDoneChan <- true
 	app.ErrorDoneChan <- true
 	app.Mailer.MailerDoneChan <- true
 	defer app.DB.Close()
@@ -151,7 +156,6 @@ func appInit() {
 	close(app.Mailer.MailerDoneChan)
 	close(app.Mailer.MailerDataChan)
 	close(app.Mailer.MailerErrorChan)
-	app.ReminderDoneChan <- true
 	close(app.ReminderDoneChan)
 
 	fmt.Println("Shutdown Completed")
