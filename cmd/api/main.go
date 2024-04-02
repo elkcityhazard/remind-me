@@ -2,82 +2,56 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/config"
 	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
-	"github.com/elkcityhazard/remind-me/internal/handlers"
 	"github.com/elkcityhazard/remind-me/internal/mailer"
 	"github.com/elkcityhazard/remind-me/pkg/utils"
 )
 
-var (
-	app        config.AppConfig
-	utilWriter utils.Utils
-)
+var app config.AppConfig
+var utilWriter *utils.Utils
 
 func main() {
-
-	appInit()
-
+	shutdownCtx, cancel := context.WithCancel(context.Background())
+	setupApp()
+	parseFlags()
+	setupHTTPServer(shutdownCtx)
+	setupMailer()
+	setupPollScheduledReminders()
+	listenForErrors()
+	gracefulShutdown(cancel)
 }
 
-func pollScheduledReminders(doneChan <-chan bool, wg *sync.WaitGroup) {
-
-	ticker := time.NewTicker(time.Second * 5)
-
-	go func() {
-
-		defer wg.Done()
-
-		for {
-			select {
-			case <-doneChan:
-				app.InfoLog.Print("trying to stop the ticker...")
-				ticker.Stop()
-				return
-			case t := <-ticker.C:
-				app.InfoChan <- fmt.Sprintf("Ticking: %v", t)
-				reminders, err := sqldbrepo.GetDatabaseConnection().ProcessRemindersForUser(1)
-
-				if err != nil {
-					app.ErrorChan <- err
-				}
-
-				app.InfoChan <- fmt.Sprintf("Processed the following Scheduled Reminders: %v", reminders)
-			}
-		}
-
-	}()
+func setupApp() {
+	app = config.NewAppConfig()
+	utilWriter = utils.NewUtils(&app)
+	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	app.DB = dbConn
 }
 
-func startHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func setupHTTPServer(ctx context.Context) {
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: routes(&app),
-		TLSConfig: &tls.Config{
-			MinVersion:               tls.VersionTLS13,
-			PreferServerCipherSuites: true,
-		},
 	}
 
 	// Start the server in a goroutine
+	app.WG.Add(1)
 	go func() {
+		defer app.WG.Done()
 		fmt.Println("starting server...")
-
-		app.WG.Add(1)
-		go listenForErrors(app.InfoChan, app.ErrorChan, app.ErrorDoneChan)
 
 		if err := srv.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
 			log.Fatalf("Server startup failed: %v", err)
@@ -86,69 +60,62 @@ func startHTTPServer(ctx context.Context, wg *sync.WaitGroup) {
 
 	// Listen for the context to be canceled
 	go func() {
+
 		<-ctx.Done()
 		// When the context is canceled, initiate a graceful shutdown of the server
 		fmt.Println("finalizing shutdown")
-		if err := srv.Shutdown(context.Background()); err != nil {
+		if err := srv.Shutdown(ctx); err != nil {
 			log.Fatalf("Server shutdown failed: %v", err)
 		}
 		os.Exit(0)
 	}()
-
 }
 
-func appInit() {
-	app = config.NewAppConfig()
-	parseFlags()
-	utilWriter = *utils.NewUtils(&app)
+func setupMailer() {
 	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com")
 	app.Mailer = mailHandler
+}
+
+func setupPollScheduledReminders() {
 	app.WG.Add(1)
+	go pollScheduledReminders()
+}
 
-	go app.Mailer.ListenForMail(&app.WG)
+func pollScheduledReminders() {
+	defer app.WG.Done()
 
-	handlers.NewHandlers(&app)
-	handlers.PassUtilToHandlers(&utilWriter)
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
 
-	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
-	if err != nil {
-		app.ErrorChan <- err
+	for {
+		select {
+		case <-app.ReminderDoneChan:
+			return
+		case t := <-ticker.C:
+			app.InfoChan <- fmt.Sprintf("Ticking: %v", t)
+			reminders, err := sqldbrepo.GetDatabaseConnection().ProcessRemindersForUser(1)
+			if err != nil {
+				app.ErrorChan <- err
+			}
+			app.InfoChan <- fmt.Sprintf("Processed the following Scheduled Reminders: %v", reminders)
+		}
 	}
+}
 
-	app.DB = dbConn
-
-	err = app.DB.Ping()
-	if err != nil {
-		app.ErrorChan <- err
-	}
-
-	handlers.NewHandlers(&app) // we are passing this to the handlers package.  we might want to upgrade it to an interface later
-
-	shutdownCtx, cancel := context.WithCancel(context.Background())
-
-	app.WG.Add(1)
-
-	go startHTTPServer(shutdownCtx, &app.WG)
-
+func gracefulShutdown(cancel context.CancelFunc) {
 	signalCh := make(chan os.Signal, 1)
-
-	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
-
-	app.WG.Add(1)
-
-	go pollScheduledReminders(app.ReminderDoneChan, &app.WG)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	<-signalCh
 
-	fmt.Println("Shutting down server")
-
 	cancel()
 
-	app.WG.Wait()
+	fmt.Println("Shutting down server")
+
 	app.ReminderDoneChan <- true
 	app.ErrorDoneChan <- true
-	app.Mailer.MailerDoneChan <- true
-	defer app.DB.Close()
+
+	app.WG.Wait()
 
 	close(app.InfoChan)
 	close(app.ErrorChan)
@@ -158,22 +125,31 @@ func appInit() {
 	close(app.Mailer.MailerErrorChan)
 	close(app.ReminderDoneChan)
 
+	if err := app.DB.Close(); err != nil {
+		log.Printf("Failed to close database connection: %v", err)
+	}
+
 	fmt.Println("Shutdown Completed")
-	os.Exit(1)
+	os.Exit(0)
 }
 
-func listenForErrors(infoChan <-chan string, eChan <-chan error, eDoneChan <-chan bool) {
-	defer app.WG.Done()
-	for {
-		select {
-		case info := <-infoChan:
-			app.InfoLog.Println(info)
-		case err := <-eChan:
-			app.ErrorLog.Print(err.Error())
-		case <-eDoneChan:
-			return
+func listenForErrors() {
+	app.WG.Add(1)
+
+	go func() {
+		defer app.WG.Done()
+
+		for {
+			select {
+			case err := <-app.ErrorChan:
+				app.ErrorLog.Println(err)
+			case msg := <-app.InfoChan:
+				app.InfoLog.Print(msg)
+			case <-app.ErrorDoneChan:
+				return
+			}
 		}
-	}
+	}()
 }
 
 func parseFlags() {
