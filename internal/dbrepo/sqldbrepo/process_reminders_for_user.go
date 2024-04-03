@@ -1,28 +1,31 @@
 package sqldbrepo
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/models"
 )
 
-func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, error) {
+func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]models.Reminder, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+
+	defer cancel()
 
 	reminderChan := make(chan *models.Reminder)
 	errorChan := make(chan error)
 	reminderDoneChan := make(chan bool)
 
 	sqdb.Config.WG.Add(1)
+
 	go func() {
 		defer sqdb.Config.WG.Done()
 
-		rows, err := sqdb.Config.DB.Query(`SELECT Schedule.ID, Schedule.ReminderID, Schedule.DispatchTime, Schedule.Version, 
+		rows, err := sqdb.Config.DB.QueryContext(ctx, `SELECT Schedule.ID, Schedule.ReminderID, Schedule.DispatchTime, Schedule.Version, 
 		Reminder.Title, Reminder.Content, Reminder.DueDate, Reminder.Version, 
 		User.Email FROM Schedule 
 		INNER JOIN Reminder ON Reminder.ID = Schedule.ReminderID 
@@ -45,7 +48,7 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 		tx, err := sqdb.Config.DB.Begin()
 
 		if err != nil {
-
+			tx.Rollback()
 			errorChan <- err
 			return
 
@@ -89,8 +92,6 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 
 		for _, srm := range scheduledReminders {
 
-			log.Printf("%+v", *srm)
-
 			emailData := make(map[string]any)
 
 			emailData["Reminder"] = srm.Reminder
@@ -106,7 +107,7 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 			srm.Schedule.IsProcessed = 1
 			srm.Schedule.UpdatedAt = time.Now()
 
-			updateSched, err := tx.Prepare("UPDATE Schedule SET IsProcessed = ?, UpdatedAt=NOW(), Version = Version + 1 WHERE ID = ? AND Version = ?")
+			updateSched, err := tx.PrepareContext(ctx, "UPDATE Schedule SET IsProcessed = ?, UpdatedAt=NOW(), Version = Version + 1 WHERE ID = ? AND Version = ?")
 
 			if err != nil {
 				fmt.Println(err)
@@ -115,10 +116,9 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 				return
 			}
 
-			_, err = updateSched.Exec(1, srm.Schedule.ID, srm.Schedule.Version)
+			_, err = updateSched.ExecContext(ctx, 1, srm.Schedule.ID, srm.Schedule.Version)
 
 			if err != nil {
-				fmt.Println(err)
 				tx.Rollback()
 				errorChan <- err
 				return
@@ -126,12 +126,13 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 
 			reminderChan <- &srm.Reminder
 
-			req, _ := http.NewRequest("POST", "https://ntfy.sh/megalawnalien_reminders_3739",
-				strings.NewReader(fmt.Sprintf("Due: %s - %s", srm.Reminder.DueDate.Format("Jan 02, 2006, 03:04:05pm"), srm.Reminder.Content)))
-			req.Header.Set("Title", srm.Reminder.Title)
-			req.Header.Set("Priority", "default")
-			req.Header.Set("Tags", "envelope")
-			http.DefaultClient.Do(req)
+			err = sqdb.SendNotification(srm.Reminder.DueDate, srm.Reminder.Title, srm.Reminder.Content)
+
+			if err != nil {
+				tx.Rollback()
+				errorChan <- err
+				return
+			}
 
 			sqdb.Config.Mailer.MailerDataChan <- &emailPayload
 
@@ -147,10 +148,9 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 		}
 
 		reminderDoneChan <- true
-
 	}()
 
-	processedReminders := []*models.Reminder{}
+	processedReminders := []models.Reminder{}
 
 	for {
 		select {
@@ -158,7 +158,7 @@ func (sqdb *SQLDBRepo) ProcessRemindersForUser(id int64) ([]*models.Reminder, er
 			return nil, err
 		case reminder := <-reminderChan:
 			sqdb.Config.InfoChan <- "receiving a new reminder"
-			processedReminders = append(processedReminders, reminder)
+			processedReminders = append(processedReminders, *reminder)
 		case <-reminderDoneChan:
 			return processedReminders, nil
 

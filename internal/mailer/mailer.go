@@ -3,7 +3,6 @@ package mailer
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"log"
 	"sync"
 	"text/template"
@@ -95,7 +94,6 @@ func (m *Mailer) ListenForMail(wg *sync.WaitGroup) {
 		case err := <-m.MailerErrorChan:
 			log.Println(err)
 		case <-m.MailerDoneChan:
-			fmt.Println("mailer done signal")
 			return
 		}
 	}

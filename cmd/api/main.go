@@ -23,7 +23,6 @@ var utilWriter *utils.Utils
 func main() {
 	shutdownCtx, cancel := context.WithCancel(context.Background())
 	setupApp()
-	parseFlags()
 	setupHTTPServer(shutdownCtx)
 	setupMailer()
 	setupPollScheduledReminders()
@@ -33,12 +32,14 @@ func main() {
 
 func setupApp() {
 	app = config.NewAppConfig()
+	parseFlags()
 	utilWriter = utils.NewUtils(&app)
 	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	app.DB = dbConn
+
 }
 
 func setupHTTPServer(ctx context.Context) {
@@ -59,7 +60,10 @@ func setupHTTPServer(ctx context.Context) {
 	}()
 
 	// Listen for the context to be canceled
+	app.WG.Add(1)
 	go func() {
+
+		defer app.WG.Done()
 
 		<-ctx.Done()
 		// When the context is canceled, initiate a graceful shutdown of the server
@@ -67,13 +71,16 @@ func setupHTTPServer(ctx context.Context) {
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Fatalf("Server shutdown failed: %v", err)
 		}
-		os.Exit(0)
+
 	}()
 }
 
 func setupMailer() {
 	mailHandler := mailer.New("localhost", 1025, "web", "password", "web@remind-me.com")
 	app.Mailer = mailHandler
+	app.WG.Add(1)
+	go app.Mailer.ListenForMail(&app.WG)
+
 }
 
 func setupPollScheduledReminders() {
@@ -84,7 +91,7 @@ func setupPollScheduledReminders() {
 func pollScheduledReminders() {
 	defer app.WG.Done()
 
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second * 1)
 	defer ticker.Stop()
 
 	for {
@@ -97,7 +104,10 @@ func pollScheduledReminders() {
 			if err != nil {
 				app.ErrorChan <- err
 			}
-			app.InfoChan <- fmt.Sprintf("Processed the following Scheduled Reminders: %v", reminders)
+			if len(reminders) > 0 {
+				app.InfoChan <- fmt.Sprintf("Processed the following Scheduled Reminders: %v", reminders)
+			}
+
 		}
 	}
 }
@@ -114,6 +124,7 @@ func gracefulShutdown(cancel context.CancelFunc) {
 
 	app.ReminderDoneChan <- true
 	app.ErrorDoneChan <- true
+	app.Mailer.MailerDoneChan <- true
 
 	app.WG.Wait()
 
@@ -131,6 +142,7 @@ func gracefulShutdown(cancel context.CancelFunc) {
 
 	fmt.Println("Shutdown Completed")
 	os.Exit(0)
+	fmt.Println("extra message")
 }
 
 func listenForErrors() {

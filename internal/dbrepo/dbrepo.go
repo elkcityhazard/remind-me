@@ -1,6 +1,10 @@
 package dbrepo
 
-import "github.com/elkcityhazard/remind-me/internal/models"
+import (
+	"time"
+
+	"github.com/elkcityhazard/remind-me/internal/models"
+)
 
 type DBServicer interface {
 	InsertUser(*models.User) (int64, error)
@@ -12,5 +16,7 @@ type DBServicer interface {
 
 	InsertReminder(r *models.Reminder) (int64, error)
 	GetUserRemindersByID(id int64) ([]*models.Reminder, error)
-	ProcessRemindersForUser(id int64) ([]*models.Reminder, error)
+	ProcessRemindersForUser(id int64) ([]models.Reminder, error)
+	ProcessAllReminders() ([]models.Reminder, error)
+	SendNotification(dueDate time.Time, title, content string) error
 }

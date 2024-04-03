@@ -15,22 +15,22 @@ INSERT INTO Reminder
 (Title, Content, UserID, DueDate, Version)
 VALUES
     (
-        "Go To Dentist",
-        "You Have A Dentist Appointment With Dr. Doom",
+        "Elizabeth, you are loved and worthy",
+        "and i love you very much",
         1,
         TIMESTAMP(DATE_ADD(NOW(), INTERVAL 1 WEEK)),
         1
     ),
     (
-        "Go To Doctor",
-        "You have to get your foot removed",
+        "I believe in you",
+        "and I love you unconditionally",
         1,
         TIMESTAMP(DATE_ADD(NOW(), INTERVAL 2 WEEK)),
          1
     ),
     (
-        "Finish Book Report",
-        "Must finish book report on 1984",
+        "I care about you",
+        "you enrich my life",
         1,
          TIMESTAMP(DATE_ADD(NOW(), INTERVAL 3 WEEK)),
         1
