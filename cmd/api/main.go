@@ -100,7 +100,7 @@ func pollScheduledReminders() {
 			return
 		case t := <-ticker.C:
 			app.InfoChan <- fmt.Sprintf("Ticking: %v", t)
-			reminders, err := sqldbrepo.GetDatabaseConnection().ProcessRemindersForUser(1)
+			reminders, err := sqldbrepo.GetDatabaseConnection().ProcessAllReminders()
 			if err != nil {
 				app.ErrorChan <- err
 			}
