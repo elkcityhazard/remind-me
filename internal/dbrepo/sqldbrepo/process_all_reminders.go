@@ -198,14 +198,13 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 
 		}
 
-		sqdb.Config.InfoChan <- fmt.Sprintf("%+v", userEmails)
-
 		for _, u := range userEmails {
 			emailData := make(map[string]any)
 			for _, r := range reminderData {
-				emailData["Reminder"] = r
-				for _, s := range r.Schedule {
-					if u.ID == r.UserID {
+
+				if r.UserID == u.ID {
+					emailData["Reminder"] = r
+					for _, s := range r.Schedule {
 
 						emailData["Schedule"] = s
 						emailData["User"] = u
@@ -249,8 +248,11 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 						}
 
 						sqdb.Config.Mailer.MailerDataChan <- &emailPayload
+
 					}
+
 				}
+
 			}
 		}
 
@@ -277,10 +279,10 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 			sqdb.Config.InfoChan <- "receiving a new reminder"
 			processedReminders = append(processedReminders, *reminder)
 		case <-reminderDoneChan:
+			close(errorChan)
+			close(reminderChan)
+			close(reminderDoneChan)
 			return processedReminders, nil
-		default:
-			// Optionally, add logic here to handle the case where no values are ready to be received.
-			sqdb.Config.InfoChan <- "nothing to do right now"
 		}
 	}
 }

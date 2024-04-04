@@ -91,7 +91,7 @@ func setupPollScheduledReminders() {
 func pollScheduledReminders() {
 	defer app.WG.Done()
 
-	ticker := time.NewTicker(time.Second * 1)
+	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
 	for {
@@ -108,6 +108,7 @@ func pollScheduledReminders() {
 			if len(reminders) > 0 {
 				app.InfoChan <- fmt.Sprintf("Processed the following Scheduled Reminders: %v", reminders)
 			}
+			ticker.Reset(time.Second * 15)
 
 		}
 	}
