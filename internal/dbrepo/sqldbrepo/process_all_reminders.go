@@ -2,8 +2,9 @@ package sqldbrepo
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
+			reminderDoneChan <- true
 			return
 		}
 
@@ -37,6 +39,7 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
+			reminderDoneChan <- true
 			return
 		}
 
@@ -52,12 +55,24 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 			err := fetchScheduledReminders.Scan(&s.ID, &s.ReminderID, &s.CreatedAt, &s.UpdatedAt, &s.DispatchTime, &s.IsProcessed, &s.Version)
 
 			if err != nil {
+				if err == sql.ErrNoRows {
+					tx.Rollback()
+					errorChan <- errors.New("no scheduled reminders right now")
+					reminderDoneChan <- true
+					return
+				}
 				tx.Rollback()
 				errorChan <- err
+				reminderDoneChan <- true
 				return
 			}
 
 			remindersToSend = append(remindersToSend, &s)
+		}
+
+		if len(remindersToSend) == 0 {
+			reminderDoneChan <- true
+			return
 		}
 
 		// fetch the reminders associated with the scheduled outgoing notifications
@@ -67,18 +82,23 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 		for _, s := range remindersToSend {
 
 			if !sliceContainsID(idsToFetch, s.ID) {
-				idsToFetch = append(idsToFetch, s.ID)
+				idsToFetch = append(idsToFetch, s.ReminderID)
 			}
 
 		}
 
-		formattedIDs := joinIntsToString(idsToFetch)
+		reminderArgs := int64SliceToAnySlice(idsToFetch)
 
-		fetchReminderData, err := tx.QueryContext(ctx, fmt.Sprintf("SELECT * FROM Reminder WHERE id IN (%s)", strings.Join(formattedIDs, ",")))
+		substitutionString := createPlaceholdersFromSlice(idsToFetch)
+
+		reminderStmt := fmt.Sprintf("SELECT * FROM Reminder WHERE ID IN (%s)", strings.TrimSpace(substitutionString))
+
+		fetchReminderData, err := tx.QueryContext(ctx, reminderStmt, reminderArgs...)
 
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
+			reminderDoneChan <- true
 			return
 		}
 
@@ -93,8 +113,15 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 			err := fetchReminderData.Scan(&r.ID, &r.Title, &r.Content, &r.UserID, &r.DueDate, &r.CreatedAt, &r.UpdatedAt, &r.Version)
 
 			if err != nil {
+				if err == sql.ErrNoRows {
+					tx.Rollback()
+					errorChan <- errors.New("no scheduled reminders right now")
+					reminderDoneChan <- true
+					return
+				}
 				tx.Rollback()
 				errorChan <- err
+				reminderDoneChan <- true
 				return
 			}
 
@@ -102,7 +129,25 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 
 		}
 
+		if len(reminderData) == 0 {
+			reminderDoneChan <- true
+			return
+		}
+
+		userIDSlice := []int64{}
+
 		for _, r := range reminderData {
+
+			// check if the reminder has a user id foreign key
+
+			if r.UserID > 0 {
+				if !sliceContainsID(userIDSlice, r.UserID) {
+					userIDSlice = append(userIDSlice, r.UserID)
+
+				}
+			}
+
+			// loop through the reminders to send and append them to the reminder
 
 			for _, s := range remindersToSend {
 
@@ -113,23 +158,18 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 			}
 		}
 
-		userIDSlice := []int64{}
+		formattedUserIDs := int64SliceToAnySlice(userIDSlice)
 
-		for _, r := range reminderData {
+		userSubstitutionString := createPlaceholdersFromSlice(userIDSlice)
 
-			if !sliceContainsID(userIDSlice, r.UserID) {
-				userIDSlice = append(userIDSlice, r.UserID)
-			}
+		userStmt := fmt.Sprintf("SELECT ID, Email FROM User WHERE ID IN (%s)", strings.TrimSpace(userSubstitutionString))
 
-		}
-
-		formattedUserIDs := joinIntsToString(userIDSlice)
-
-		fetchUserData, err := tx.QueryContext(ctx, fmt.Sprintf("SELECT ID, Email FROM User WHERE ID in (%s)", strings.Join(formattedUserIDs, ",")))
+		fetchUserData, err := tx.QueryContext(ctx, userStmt, formattedUserIDs...)
 
 		if err != nil {
 			tx.Rollback()
 			errorChan <- err
+			reminderDoneChan <- true
 			return
 		}
 
@@ -142,8 +182,15 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 
 			err := fetchUserData.Scan(&u.ID, &u.Email)
 			if err != nil {
+				if err == sql.ErrNoRows {
+					tx.Rollback()
+					errorChan <- errors.New("no scheduled reminders right now")
+					reminderDoneChan <- true
+					return
+				}
 				tx.Rollback()
 				errorChan <- err
+				reminderDoneChan <- true
 				return
 			}
 
@@ -151,15 +198,17 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 
 		}
 
+		sqdb.Config.InfoChan <- fmt.Sprintf("%+v", userEmails)
+
 		for _, u := range userEmails {
+			emailData := make(map[string]any)
 			for _, r := range reminderData {
+				emailData["Reminder"] = r
 				for _, s := range r.Schedule {
 					if u.ID == r.UserID {
-						emailData := make(map[string]any)
 
-						emailData["Reminder"] = r
 						emailData["Schedule"] = s
-						emailData["User"] = u.Email
+						emailData["User"] = u
 
 						emailPayload := models.EmailData{
 							Recipient:    u.Email,
@@ -173,9 +222,9 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 						updateSched, err := tx.PrepareContext(ctx, "UPDATE Schedule SET IsProcessed = ?, UpdatedAt=NOW(), Version = Version + 1 WHERE ID = ? AND Version = ?")
 
 						if err != nil {
-							fmt.Println(err)
 							tx.Rollback()
 							errorChan <- err
+							reminderDoneChan <- true
 							return
 						}
 
@@ -184,6 +233,7 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 						if err != nil {
 							tx.Rollback()
 							errorChan <- err
+							reminderDoneChan <- true
 							return
 						}
 
@@ -194,6 +244,7 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 						if err != nil {
 							tx.Rollback()
 							errorChan <- err
+							reminderDoneChan <- true
 							return
 						}
 
@@ -206,9 +257,9 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 		err = tx.Commit()
 
 		if err != nil {
-			fmt.Println(err)
 			tx.Rollback()
 			errorChan <- err
+			reminderDoneChan <- true
 			return
 		}
 
@@ -221,13 +272,15 @@ func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
 	for {
 		select {
 		case err := <-errorChan:
-			return nil, err
+			sqdb.Config.ErrorChan <- err
 		case reminder := <-reminderChan:
 			sqdb.Config.InfoChan <- "receiving a new reminder"
 			processedReminders = append(processedReminders, *reminder)
 		case <-reminderDoneChan:
 			return processedReminders, nil
-
+		default:
+			// Optionally, add logic here to handle the case where no values are ready to be received.
+			sqdb.Config.InfoChan <- "nothing to do right now"
 		}
 	}
 }
@@ -244,18 +297,29 @@ func sliceContainsID(s []int64, v int64) bool {
 	return false
 }
 
-func joinIntsToString(s []int64) []string {
+func createPlaceholdersFromSlice(s []int64) string {
 
-	tmp := []string{}
-
-	for _, v := range s {
-
-		itos := strconv.FormatInt(v, 10)
-
-		tmp = append(tmp, itos)
-
+	if len(s) == 0 {
+		return ""
 	}
 
-	return tmp
+	ph := []string{}
 
+	for range s {
+		ph = append(ph, "?")
+	}
+
+	if len(ph) > 0 {
+		return strings.Join(ph, ",")
+	}
+
+	return ""
+}
+
+func int64SliceToAnySlice(intSlice []int64) []interface{} {
+	anySlice := make([]interface{}, len(intSlice))
+	for i, v := range intSlice {
+		anySlice[i] = v
+	}
+	return anySlice
 }

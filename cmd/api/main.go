@@ -102,6 +102,7 @@ func pollScheduledReminders() {
 			app.InfoChan <- fmt.Sprintf("Ticking: %v", t)
 			reminders, err := sqldbrepo.GetDatabaseConnection().ProcessAllReminders()
 			if err != nil {
+				log.Fatalln(err)
 				app.ErrorChan <- err
 			}
 			if len(reminders) > 0 {
