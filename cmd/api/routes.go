@@ -48,7 +48,7 @@ func ReminderRoutes() http.Handler {
 	r := chi.NewRouter()
 
 	//r.Use(RequiresAuth)
-
+	r.Get("/", handlers.HandleGetFilteredUserRemindersByID)
 	r.Post("/add", handlers.HandleInsertReminder)
 	r.Get("/{id}", handlers.HandleGetUserReminders)
 	return r

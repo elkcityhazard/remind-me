@@ -16,6 +16,7 @@ type DBServicer interface {
 
 	InsertReminder(r *models.Reminder) (int64, error)
 	GetUserRemindersByID(id int64) ([]*models.Reminder, error)
+	GetFilteredUserRemindersByID(id int64, limit int, offset int) ([]*models.Reminder, error)
 	ProcessRemindersForUser(id int64) ([]models.Reminder, error)
 	ProcessAllReminders() ([]models.Reminder, error)
 	SendNotification(dueDate time.Time, title, content string) error
