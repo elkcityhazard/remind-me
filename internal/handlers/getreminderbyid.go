@@ -1,24 +1,17 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
+	"github.com/go-chi/chi/v5"
 )
 
-func HandleGetUserReminders(w http.ResponseWriter, r *http.Request) {
+func HandleGetReminderByID(w http.ResponseWriter, r *http.Request) {
 
-	id, err := GetIDFromRouteKey(r)
-
-	if err != nil {
-		if err := utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		return
-	}
-
-	reminders, err := sqldbrepo.GetDatabaseConnection().GetUserRemindersByID(id)
+	reminderID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 
 	if err != nil {
 		if err := utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
@@ -28,16 +21,16 @@ func HandleGetUserReminders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, v := range reminders {
-		v.Schedule, err = sqldbrepo.GetDatabaseConnection().GetReminderSchedulesByID(v.ID)
+	fmt.Println(reminderID)
 
-		if err != nil {
-			if err := utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+	reminders, err := sqldbrepo.GetDatabaseConnection().GetReminderByID(reminderID)
+
+	if err != nil {
+		if err := utilWriter.ErrorJSON(w, r, "error", err.Error(), http.StatusBadRequest); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		return
 	}
 
 	if err := utilWriter.WriteJSON(w, r, "data", reminders, http.StatusOK); err != nil {

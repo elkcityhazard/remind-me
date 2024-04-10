@@ -50,7 +50,8 @@ func ReminderRoutes() http.Handler {
 	//r.Use(RequiresAuth)
 	r.Get("/", handlers.HandleGetFilteredUserRemindersByID)
 	r.Post("/add", handlers.HandleInsertReminder)
-	r.Get("/{id}", handlers.HandleGetUserReminders)
+	r.Get("/{id}", handlers.HandleGetReminderByID)
+
 	return r
 }
 

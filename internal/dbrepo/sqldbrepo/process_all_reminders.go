@@ -12,6 +12,7 @@ import (
 )
 
 func (sqdb *SQLDBRepo) ProcessAllReminders() ([]models.Reminder, error) {
+	return nil, nil
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 
 	defer cancel()

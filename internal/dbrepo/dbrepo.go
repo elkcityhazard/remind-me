@@ -15,6 +15,9 @@ type DBServicer interface {
 	ActiveUser(activationToken string, id int64) (*models.User, error)
 
 	InsertReminder(r *models.Reminder) (int64, error)
+	GetReminderSchedulesByID(reminderID int64) ([]*models.Schedule, error)
+	GetReminderByID(reminderID int64) (*models.Reminder, error)
+	UpdateReminder(reminder *models.Reminder) ([]*models.Reminder, error)
 	GetUserRemindersByID(id int64) ([]*models.Reminder, error)
 	GetFilteredUserRemindersByID(id int64, limit int, offset int) ([]*models.Reminder, error)
 	ProcessRemindersForUser(id int64) ([]models.Reminder, error)

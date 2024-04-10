@@ -2,15 +2,12 @@ package sqldbrepo
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/models"
 )
 
 func (sqdb *SQLDBRepo) GetFilteredUserRemindersByID(id int64, limit, offset int) ([]*models.Reminder, error) {
-
-	sqdb.Config.InfoChan <- fmt.Sprintf("Limit And Offset %d, %d", limit, offset)
 
 	ctx, cancel := context.WithTimeout(sqdb.Config.Context, time.Second*10)
 
@@ -25,7 +22,7 @@ func (sqdb *SQLDBRepo) GetFilteredUserRemindersByID(id int64, limit, offset int)
 	go func() {
 		defer sqdb.Config.WG.Done()
 
-		stmt := `SELECT ID, Title, Content, UserID, DueDate, CreatedAt, UpdatedAt, Version FROM Reminder WHERE Reminder.UserID = ? LIMIT  ? OFFSET ?`
+		stmt := `SELECT ID, Title, Content, UserID, DueDate, CreatedAt, UpdatedAt, Version FROM Reminder WHERE Reminder.UserID = ? AND DueDate > CURRENT_TIMESTAMP() LIMIT ? OFFSET ?`
 
 		rows, err := sqdb.Config.DB.QueryContext(ctx, stmt, id, limit, offset)
 
@@ -49,7 +46,7 @@ func (sqdb *SQLDBRepo) GetFilteredUserRemindersByID(id int64, limit, offset int)
 				return
 			}
 
-			stmt := `SELECT ID, ReminderID, CreatedAt, UpdatedAt, DispatchTime, Version FROM Schedule WHERE ReminderID = ? AND DispatchTime <= NOW()`
+			stmt := `SELECT ID, ReminderID, CreatedAt, UpdatedAt, DispatchTime, Version FROM Schedule WHERE ReminderID = ?`
 
 			schedRow, err := sqdb.Config.DB.QueryContext(ctx, stmt, r.ID)
 
