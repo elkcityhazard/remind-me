@@ -52,6 +52,7 @@ func ReminderRoutes() http.Handler {
 	r.Post("/add", handlers.HandleInsertReminder)
 	r.Get("/{id}", handlers.HandleGetReminderByID)
 	r.Put("/{id}", handlers.HandleUpdateReminder)
+	r.Put("/{id}/schedule/{scheduleID}", handlers.HandleUpdateScheduleByID)
 
 	return r
 }

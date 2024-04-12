@@ -17,6 +17,7 @@ type DBServicer interface {
 	InsertReminder(r *models.Reminder) (int64, error)
 	GetReminderSchedulesByID(reminderID int64) ([]*models.Schedule, error)
 	GetReminderByID(reminderID int64) (*models.Reminder, error)
+	GetScheduleByID(scheduleID int64) (*models.Schedule, error)
 	UpdateReminder(reminder *models.Reminder) ([]*models.Reminder, error)
 	UpdateScheduleByID(schedule *models.Schedule) (*models.Schedule, error)
 	GetUserRemindersByID(id int64) ([]*models.Reminder, error)
