@@ -24,17 +24,17 @@ func (sqdb *SQLDBRepo) UpdateScheduleByID(schedule *models.Schedule) (*models.Sc
 		defer close(errorChan)
 		defer close(scheduleChan)
 
-		stmt := `UPDATE Schedule Set 
+		stmt := `UPDATE Schedule SET 
+		ReminderID=?,
 		UpdatedAt=?, 
 		DispatchTime=?,
 		IsProcessed=?,
-		Version= Version + 1 
+		Version=Version + 1 
 		WHERE ID = ? 
 		AND Version = ?
-		AND IsProcessed < 1
 		`
 
-		args := []interface{}{schedule.UpdatedAt, schedule.DispatchTime, schedule.IsProcessed, schedule.ID, schedule.Version}
+		args := []interface{}{schedule.ReminderID, schedule.UpdatedAt, schedule.DispatchTime, schedule.IsProcessed, schedule.ID, schedule.Version}
 
 		tx, err := sqdb.Config.DB.Begin()
 

@@ -71,10 +71,6 @@ func HandleUpdateScheduleByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if su.ReminderID != nil {
-		schedule.ReminderID = *su.ReminderID
-	}
-
 	if su.DispatchTime != nil {
 		schedule.DispatchTime = *su.DispatchTime
 	}
@@ -89,11 +85,15 @@ func HandleUpdateScheduleByID(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+	if su.ReminderID != nil {
+		schedule.ReminderID = *su.ReminderID
+	}
+
 	schedule.ID = scheduleID
 
 	schedule.UpdatedAt = time.Now()
 
-	schedule, err = sqldbrepo.DBRepo.UpdateScheduleByID(schedule)
+	updateSchedule, err := sqldbrepo.DBRepo.UpdateScheduleByID(schedule)
 
 	if err != nil {
 
@@ -105,7 +105,7 @@ func HandleUpdateScheduleByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := utilWriter.WriteJSON(w, r, "data", schedule, http.StatusOK); err != nil {
+	if err := utilWriter.WriteJSON(w, r, "data", updateSchedule, http.StatusOK); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

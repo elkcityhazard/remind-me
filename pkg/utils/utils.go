@@ -91,6 +91,9 @@ func (u *Utils) GenerateRandomBytes(saltLength uint32) ([]byte, error) {
 //  and returns an encodedHashString
 
 func (u *Utils) CreateArgonHash(plainTextPW string) string {
+
+	fmt.Println(plainTextPW)
+
 	hash := argon2.IDKey([]byte(plainTextPW), u.ArgonParams.SaltKey, uint32(u.Iterations), uint32(u.Memory), uint8(u.Parallelism), uint32(u.KeyLength))
 
 	b64Salt := base64.RawStdEncoding.EncodeToString(u.ArgonParams.SaltKey)

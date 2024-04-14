@@ -80,6 +80,8 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	e := cerrors.NewErrors()
 
+	log.Printf("%+v", user)
+
 	email := user.Email
 
 	_, err = mail.ParseAddress(email)
