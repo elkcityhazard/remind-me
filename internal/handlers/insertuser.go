@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -23,7 +24,7 @@ const (
 // inactive is sent as 0, active is sent as 1
 
 func InsertUser(w http.ResponseWriter, r *http.Request) {
-
+	fmt.Printf("%+v", app)
 	if r.Method != "POST" {
 		headers := make(http.Header)
 		headers.Add("Allow", "POST")
@@ -80,12 +81,9 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	e := cerrors.NewErrors()
 
-	log.Printf("%+v", user)
-
 	email := user.Email
 
 	_, err = mail.ParseAddress(email)
-
 	if err != nil {
 		e.Add("email", "email is incorrectly formatted")
 	}
@@ -117,9 +115,11 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 
 	// salt and hash password
 
-	encodedPW := utilWriter.CreateArgonHash(user.Password.Plaintext1)
+	pwWriter := utils.NewUtils(app)
 
-	validate := utilWriter.VerifyArgonHash(user.Password.Plaintext1, encodedPW)
+	encodedPW := pwWriter.CreateArgonHash(user.Password.Plaintext1)
+
+	validate := pwWriter.VerifyArgonHash(user.Password.Plaintext2, encodedPW)
 
 	if !validate {
 		e.Add("password_1", "password does not validate")

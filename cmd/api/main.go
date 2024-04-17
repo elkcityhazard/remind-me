@@ -13,12 +13,15 @@ import (
 
 	"github.com/elkcityhazard/remind-me/internal/config"
 	"github.com/elkcityhazard/remind-me/internal/dbrepo/sqldbrepo"
+	"github.com/elkcityhazard/remind-me/internal/handlers"
 	"github.com/elkcityhazard/remind-me/internal/mailer"
 	"github.com/elkcityhazard/remind-me/pkg/utils"
 )
 
-var app config.AppConfig
-var utilWriter *utils.Utils
+var (
+	app        config.AppConfig
+	utilWriter *utils.Utils
+)
 
 func main() {
 	shutdownCtx, cancel := context.WithCancel(context.Background())
@@ -34,12 +37,13 @@ func setupApp() {
 	app = config.NewAppConfig()
 	parseFlags()
 	utilWriter = utils.NewUtils(&app)
+	handlers.NewHandlers(&app)
+
 	dbConn, err := sqldbrepo.NewSQLDBRepo(&app).NewDatabaseConn()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	app.DB = dbConn
-
 }
 
 func setupHTTPServer(ctx context.Context) {
@@ -62,7 +66,6 @@ func setupHTTPServer(ctx context.Context) {
 	// Listen for the context to be canceled
 	app.WG.Add(1)
 	go func() {
-
 		defer app.WG.Done()
 
 		<-ctx.Done()
@@ -71,7 +74,6 @@ func setupHTTPServer(ctx context.Context) {
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Fatalf("Server shutdown failed: %v", err)
 		}
-
 	}()
 }
 
@@ -80,7 +82,6 @@ func setupMailer() {
 	app.Mailer = mailHandler
 	app.WG.Add(1)
 	go app.Mailer.ListenForMail(&app.WG)
-
 }
 
 func setupPollScheduledReminders() {

@@ -91,10 +91,9 @@ func (u *Utils) GenerateRandomBytes(saltLength uint32) ([]byte, error) {
 //  and returns an encodedHashString
 
 func (u *Utils) CreateArgonHash(plainTextPW string) string {
+	fmt.Printf("%+v", u)
 
-	fmt.Println(plainTextPW)
-
-	hash := argon2.IDKey([]byte(plainTextPW), u.ArgonParams.SaltKey, uint32(u.Iterations), uint32(u.Memory), uint8(u.Parallelism), uint32(u.KeyLength))
+	hash := argon2.IDKey([]byte(plainTextPW), u.ArgonParams.SaltKey, u.Iterations, u.Memory, u.Parallelism, uint32(u.KeyLength))
 
 	b64Salt := base64.RawStdEncoding.EncodeToString(u.ArgonParams.SaltKey)
 
@@ -109,9 +108,7 @@ func (u *Utils) CreateArgonHash(plainTextPW string) string {
 //   and returns a bool (true) if it matches or (false) if it does not match
 
 func (u *Utils) VerifyArgonHash(plaintextPW string, previousHash string) bool {
-
 	p, salt, hash, err := u.DecodeHash(previousHash)
-
 	if err != nil {
 		return false
 	}
@@ -122,7 +119,6 @@ func (u *Utils) VerifyArgonHash(plaintextPW string, previousHash string) bool {
 }
 
 func (u *Utils) DecodeHash(encodedHash string) (p *ArgonParams, salt, hash []byte, err error) {
-
 	// split the encoded has
 
 	vals := strings.Split(encodedHash, "$")
@@ -164,7 +160,6 @@ func (u *Utils) DecodeHash(encodedHash string) (p *ArgonParams, salt, hash []byt
 	p.KeyLength = len(hash)
 
 	return p, salt, hash, nil
-
 }
 
 // WriteJSON takes in a responseWriter, request, enveolor, and data and write json to the response writer.
@@ -253,7 +248,6 @@ func (u *Utils) IsRequired(s interface{}, key string) bool {
 // ValidatePhoneNumber takes in a phone number as a text string, and runs a regex match on it and returns the result as a bool
 func (u *Utils) ValidatePhoneNumber(s string) bool {
 	re, err := regexp.Compile(`^(?:\+?1\s?)?(?:\(\d{3}\)\s?|\d{3}[-.\s]?)?\d{3}[-.\s]?\d{4}(?:\s?x\s?\d+)?$`)
-
 	if err != nil {
 		return false
 	}
@@ -268,11 +262,9 @@ func (u *Utils) ValidatePhoneNumber(s string) bool {
 // the error is if there is any issues generating rand
 
 func (u *Utils) GenerateActivationToken() (string, error) {
-
 	b := make([]byte, 16)
 
 	_, err := rand.Read(b)
-
 	if err != nil {
 		return "", err
 	}
@@ -280,5 +272,4 @@ func (u *Utils) GenerateActivationToken() (string, error) {
 	token := base64.RawStdEncoding.WithPadding(base64.NoPadding).EncodeToString(b)
 
 	return token, nil
-
 }

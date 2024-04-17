@@ -3,6 +3,7 @@ package sqldbrepo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/elkcityhazard/remind-me/internal/models"
@@ -24,6 +25,8 @@ func (sqdb *SQLDBRepo) InsertUser(u *models.User) (int64, error) {
 
 	idChan := make(chan int64, 1)
 	errorChan := make(chan error, 1)
+
+	fmt.Printf("%+v", sqdb)
 
 	sqdb.Config.WG.Add(1)
 
