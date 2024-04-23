@@ -110,7 +110,7 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 	isValidPhoneNumber := utilWriter.ValidatePhoneNumber(user.PhoneNumber.Plaintext)
 
 	if !isValidPhoneNumber {
-		e.Add("phone_number", "invalid phone number")
+		e.Add("phone_number", fmt.Sprintf("invalid phone number, you provided: %v", user.PhoneNumber.Plaintext))
 	}
 
 	// salt and hash password
